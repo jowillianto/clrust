@@ -136,6 +136,7 @@ impl App {
             }
             beg_id += 1;
         }
+        nodes.end_format();
         nodes.to_stdout();
         std::process::exit(exit_code);
     }
