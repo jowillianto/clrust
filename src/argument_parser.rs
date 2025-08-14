@@ -62,12 +62,12 @@ impl ArgStructure {
             Err(ParseError::ValueRequired) => arg
                 .validate(values.next())
                 .map(|_| values.current_arg().cloned()),
-            r => {
-                values.next();
-                r.map(|_| current_value)
-            }
+            r => r.map(|_| current_value),
         }
-        .map(|v| v.unwrap_or(String::from("")))
+        .map(|v| {
+            values.next();
+            return v.unwrap_or(String::from(""));
+        })
         .map_err(ArgParseError::or_else(k.value()));
     }
 
