@@ -1,6 +1,6 @@
 use crate::app_version::AppVersion;
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Default)]
 pub struct AppIdentity {
     pub name: String,
     pub description: String,
@@ -30,5 +30,8 @@ impl AppIdentity {
     pub fn licensed_with(&mut self, license: impl Into<String>) -> &mut Self {
         self.license = Some(license.into());
         return self;
+    }
+    pub fn take(&mut self) -> Self {
+        return std::mem::take(self);
     }
 }

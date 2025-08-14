@@ -59,19 +59,19 @@ impl App {
         self.add_help_args();
         return self.parser.last_mut_arg().arg_mut();
     }
-    pub fn add_parametric(&mut self, key: impl Into<ArgKey> + PartialEq<ArgKey>) -> &mut Arg {
-        return self.parser.add_parametric(key);
+    pub fn add_argument(&mut self, key: impl Into<ArgKey> + PartialEq<ArgKey>) -> &mut Arg {
+        return self.parser.add_argument(key);
     }
-    pub fn add_parametric_unchecked(&mut self, key: impl Into<String>) -> &mut Arg {
-        return self.parser.add_parametric_unchecked(key);
+    pub fn add_argument_unchecked(&mut self, key: impl Into<String>) -> &mut Arg {
+        return self.parser.add_argument_unchecked(key);
     }
     pub fn add_help_args(&mut self) {
         self.parser
-            .add_parametric_unchecked("-h")
+            .add_argument_unchecked("-h")
             .help("Show the help message for the application")
             .optional();
         self.parser
-            .add_parametric_unchecked("--help")
+            .add_argument_unchecked("--help")
             .help("Show the help message for the application")
             .optional();
     }

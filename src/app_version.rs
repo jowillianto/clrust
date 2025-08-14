@@ -6,7 +6,7 @@ pub enum AppVersionParseError {
     IntegerParse(ParseIntError),
 }
 
-#[derive(cmp::PartialEq, Copy, Debug, Clone)]
+#[derive(Default, cmp::PartialEq, Copy, Debug, Clone)]
 pub struct AppVersion {
     pub major: u32,
     pub minor: u32,

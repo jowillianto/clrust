@@ -14,11 +14,7 @@ impl PositionalParsedArgs {
             parameters: Vec::new(),
         };
     }
-    pub fn add_parametric(
-        &mut self,
-        key: impl Into<ArgKey>,
-        value: impl Into<String>,
-    ) -> &mut Self {
+    pub fn add_argument(&mut self, key: impl Into<ArgKey>, value: impl Into<String>) -> &mut Self {
         self.parameters.push((key.into(), value.into()));
         return self;
     }
@@ -120,12 +116,8 @@ impl ParsedArg {
         self.args.push(PositionalParsedArgs::new(value));
         return self;
     }
-    pub fn add_parametric(
-        &mut self,
-        key: impl Into<ArgKey>,
-        value: impl Into<String>,
-    ) -> &mut Self {
-        self.args.last_mut().unwrap().add_parametric(key, value);
+    pub fn add_argument(&mut self, key: impl Into<ArgKey>, value: impl Into<String>) -> &mut Self {
+        self.args.last_mut().unwrap().add_argument(key, value);
         return self;
     }
 

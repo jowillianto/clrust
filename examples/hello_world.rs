@@ -5,7 +5,7 @@ struct VarBuilder {}
 
 impl clrust::ActionProvider for VarBuilder {
     fn run(&self, app: &mut clrust::App) {
-        app.add_parametric_unchecked("--name").required();
+        app.add_argument_unchecked("--name").required();
         app.add_help_args();
         app.parse_args();
         println!("name: {}", app.args.first_of("--name").unwrap());

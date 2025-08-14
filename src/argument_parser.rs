@@ -17,7 +17,7 @@ impl ArgStructure {
             parameters: Vec::new(),
         };
     }
-    pub fn add_parametric(&mut self, k: impl Into<ArgKey> + PartialEq<ArgKey>) -> &mut Arg {
+    pub fn add_argument(&mut self, k: impl Into<ArgKey> + PartialEq<ArgKey>) -> &mut Arg {
         if self
             .parameters
             .iter()
@@ -35,8 +35,8 @@ impl ArgStructure {
                 .1;
         }
     }
-    pub fn add_parametric_unchecked(&mut self, k: impl Into<String>) -> &mut Arg {
-        return self.add_parametric(ArgKey::new_unchecked(k));
+    pub fn add_argument_unchecked(&mut self, k: impl Into<String>) -> &mut Arg {
+        return self.add_argument(ArgKey::new_unchecked(k));
     }
     pub fn param_iter(&self) -> impl Iterator<Item = &(ArgKey, Arg)> {
         return self.parameters.iter();
@@ -98,7 +98,7 @@ impl ArgStructure {
                     if k == &parsed_k {
                         is_parser_run = true;
                         let v = self.parse_param(k, arg, parsed_v, values)?;
-                        values.add_parametric(k.clone(), v);
+                        values.add_argument(k.clone(), v);
                         break;
                     }
                 }
@@ -130,11 +130,11 @@ impl ArgumentParser {
         });
         return &mut self.args.last_mut().unwrap().positional;
     }
-    pub fn add_parametric(&mut self, k: impl Into<ArgKey> + PartialEq<ArgKey>) -> &mut Arg {
-        return self.args.last_mut().unwrap().add_parametric(k);
+    pub fn add_argument(&mut self, k: impl Into<ArgKey> + PartialEq<ArgKey>) -> &mut Arg {
+        return self.args.last_mut().unwrap().add_argument(k);
     }
-    pub fn add_parametric_unchecked(&mut self, k: impl Into<String>) -> &mut Arg {
-        return self.args.last_mut().unwrap().add_parametric_unchecked(k);
+    pub fn add_argument_unchecked(&mut self, k: impl Into<String>) -> &mut Arg {
+        return self.args.last_mut().unwrap().add_argument_unchecked(k);
     }
     pub fn arg_iter_mut(&mut self) -> impl Iterator<Item = &mut ArgStructure> {
         return self.args.iter_mut();
