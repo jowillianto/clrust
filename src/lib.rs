@@ -13,3 +13,8 @@ pub use action_builder::{ActionBuilder, ActionProvider};
 pub use app::App;
 pub use app_identity::AppIdentity;
 pub use app_version::AppVersion;
+pub use terminal::Color;
+pub use terminal::TerminalNode;
+pub use terminal::TerminalNodes;
+pub use terminal::TextEffect;
+pub use terminal::TextFormat;

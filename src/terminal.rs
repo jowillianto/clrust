@@ -51,21 +51,33 @@ impl TextFormat {
     pub fn new() -> Self {
         Self::default()
     }
-    pub fn bg(mut self, color: Color) -> Self {
+    pub fn bg(&mut self, color: Color) -> &mut Self {
         self.bg = Some(color);
-        self
+        return self;
     }
-    pub fn fg(mut self, color: Color) -> Self {
+    pub fn fg(&mut self, color: Color) -> &mut Self {
         self.fg = Some(color);
-        self
+        return self;
     }
-    pub fn effect(mut self, effect: TextEffect) -> Self {
+    pub fn effect(&mut self, effect: TextEffect) -> &mut Self {
         self.effects.insert(effect);
-        self
+        return self;
     }
-    pub fn effects<I: IntoIterator<Item = TextEffect>>(mut self, effects: I) -> Self {
+    pub fn effects<I: IntoIterator<Item = TextEffect>>(&mut self, effects: I) -> &mut Self {
         self.effects.extend(effects);
-        self
+        return self;
+    }
+    pub fn has_effect(&self, effect: &impl PartialEq<TextEffect>) -> bool {
+        return self.effects.iter().find(|&e| effect == e).is_some();
+    }
+    pub fn len_effects(&self) -> usize {
+        return self.effects.len();
+    }
+    pub fn get_bg(&self) -> Option<&Color> {
+        return self.bg.as_ref();
+    }
+    pub fn get_fg(&self) -> Option<&Color> {
+        return self.fg.as_ref();
     }
     pub fn take(&mut self) -> Self {
         return std::mem::take(self);
@@ -155,11 +167,17 @@ impl TerminalNodes {
     pub fn to_stderr(&self) {
         std::eprintln!("{}", self);
     }
-    pub fn len(&mut self) -> usize {
+    pub fn len(&self) -> usize {
         return self.nodes.len();
+    }
+    pub fn iter(&self) -> impl Iterator<Item = &TerminalNode> {
+        return self.nodes.iter();
     }
     pub fn take(&mut self) -> Self {
         return std::mem::take(self);
+    }
+    pub fn indent(&self) -> usize {
+        return self.ident;
     }
 }
 

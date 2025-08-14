@@ -16,8 +16,14 @@ pub struct OutputFormat {
 impl Default for OutputFormat {
     fn default() -> Self {
         return Self {
-            error: TextFormat::new().bg(Color::Yellow).effect(TextEffect::Bold),
-            help: TextFormat::new().bg(Color::Green).effect(TextEffect::Bold),
+            error: TextFormat::new()
+                .bg(Color::Yellow)
+                .effect(TextEffect::Bold)
+                .take(),
+            help: TextFormat::new()
+                .bg(Color::Green)
+                .effect(TextEffect::Bold)
+                .take(),
         };
     }
 }

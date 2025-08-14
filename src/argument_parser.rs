@@ -179,6 +179,7 @@ impl ArgumentParser {
         return self.args.get_mut(id);
     }
 }
+
 impl Default for ArgumentParser {
     fn default() -> Self {
         return Self {
