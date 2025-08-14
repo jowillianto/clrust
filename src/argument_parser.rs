@@ -62,7 +62,10 @@ impl ArgStructure {
             Err(ParseError::ValueRequired) => arg
                 .validate(values.next())
                 .map(|_| values.current_arg().cloned()),
-            r => r.map(|_| current_value),
+            r => {
+                values.next();
+                r.map(|_| current_value)
+            }
         }
         .map(|v| v.unwrap_or(String::from("")))
         .map_err(ArgParseError::or_else(k.value()));
@@ -89,9 +92,10 @@ impl ArgStructure {
             self.positional
                 .post_validate(None, values)
                 .map_err(ArgParseError::or_else(pos_name.clone()))?;
+            values.next();
         }
         let mut is_parser_run = true;
-        while is_parser_run && let Some(current) = values.next().cloned() {
+        while is_parser_run && let Some(current) = values.current_arg().cloned() {
             is_parser_run = false;
             if let Ok((parsed_k, parsed_v)) = ArgKey::from_cmd(&current) {
                 for (k, arg) in self.param_iter() {
@@ -105,6 +109,8 @@ impl ArgStructure {
                 if !is_parser_run {
                     break;
                 }
+            } else {
+                break;
             }
         }
         for (k, arg) in self.param_iter() {

@@ -51,7 +51,7 @@ impl<'a> ActionBuilder<'a> {
     }
     pub fn run(&mut self) {
         self.update_args();
-        self.app.advanced_parse_args(false, false);
+        self.app.advanced_parse_args(false);
         let pos_arg = self.app.args.current_positional();
         if self.app.args.positional_argument_size() != self.arg_id {
             self.app.log_help(Some(1));

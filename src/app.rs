@@ -3,7 +3,6 @@ use crate::{
     arg_key::ArgKey,
     argument::{Arg, ArgValidator},
     argument_parser::ArgumentParser,
-    error::ParseError,
     parsed_arg::ParsedArg,
     terminal::{Color, TerminalNode, TerminalNodes, TextEffect, TextFormat},
 };
@@ -75,15 +74,12 @@ impl App {
             .help("Show the help message for the application")
             .optional();
     }
-    pub fn advanced_parse_args(&mut self, auto_help: bool, is_final: bool) {
+    pub fn advanced_parse_args(&mut self, auto_help: bool) {
         return match self.parser.parse_mut_args(&mut self.args) {
             Ok(args) => {
                 let help_arg_count = args.count("-h") + args.count("--help");
                 if auto_help && help_arg_count != 0 {
                     self.log_help(None);
-                }
-                if is_final && self.args.current_arg().is_some() {
-                    self.log_err_and_exit(ParseError::NotEnd, Some(1));
                 }
             }
             Err(e) => {
@@ -96,7 +92,7 @@ impl App {
         };
     }
     pub fn parse_args(&mut self) {
-        self.advanced_parse_args(true, true);
+        self.advanced_parse_args(true);
     }
     pub fn log_help(&self, exit_code: Option<i32>) -> ! {
         let exit_code = exit_code.unwrap_or(0);
