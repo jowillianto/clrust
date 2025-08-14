@@ -4,9 +4,21 @@ use crate::parsed_arg::ParsedArg;
 use crate::terminal::TerminalNodes;
 
 pub trait ArgValidator {
-    fn help(&self, nodes: &mut TerminalNodes) -> ();
-    fn validate(&self, v: Option<&String>) -> Result<(), ParseError>;
-    fn post_validate(&self, key: Option<&ArgKey>, args: &ParsedArg) -> Result<(), ParseError>;
+    /*
+        This will be used to prevent duplicate insertion.
+    */
+    fn validator_id(&self) -> Option<String> {
+        return None;
+    }
+    fn help(&self, _: &mut TerminalNodes) -> () {
+        return ();
+    }
+    fn validate(&self, _: Option<&String>) -> Result<(), ParseError> {
+        return Ok(());
+    }
+    fn post_validate(&self, _: Option<&ArgKey>, _: &ParsedArg) -> Result<(), ParseError> {
+        return Ok(());
+    }
 }
 
 #[derive(Debug, Default)]
@@ -79,6 +91,9 @@ impl ArgOptions {
 }
 
 impl ArgValidator for ArgOptions {
+    fn validator_id(&self) -> Option<String> {
+        return Some(String::from("ArgOption"));
+    }
     fn help(&self, nodes: &mut TerminalNodes) -> () {
         if nodes.len() == 0 {
             return;
@@ -98,9 +113,6 @@ impl ArgValidator for ArgOptions {
             None => Err(ParseError::ValueRequired),
             Some(v) => self.check(v),
         };
-    }
-    fn post_validate(&self, _: Option<&ArgKey>, _: &ParsedArg) -> Result<(), ParseError> {
-        return Ok(());
     }
 }
 
@@ -150,6 +162,9 @@ impl Default for CountValidator {
 }
 
 impl ArgValidator for CountValidator {
+    fn validator_id(&self) -> Option<String> {
+        return Some(String::from("CountValidator"));
+    }
     fn help(&self, nodes: &mut TerminalNodes) -> () {
         if self.min_size == self.max_size && self.min_size != 1 {
             nodes
@@ -170,9 +185,6 @@ impl ArgValidator for CountValidator {
                 .new_line();
         }
     }
-    fn validate(&self, _: Option<&String>) -> Result<(), ParseError> {
-        return Ok(());
-    }
     fn post_validate(&self, key: Option<&ArgKey>, args: &ParsedArg) -> Result<(), ParseError> {
         if let Some(key) = key {
             return self.check(args.count(key));
@@ -185,6 +197,9 @@ impl ArgValidator for CountValidator {
 struct EmptyValidator {}
 
 impl ArgValidator for EmptyValidator {
+    fn validator_id(&self) -> Option<String> {
+        return Some(String::from("EmptyValidator"));
+    }
     fn help(&self, nodes: &mut TerminalNodes) -> () {
         nodes.append_node("AllowEmpty: False");
     }
@@ -216,7 +231,14 @@ impl Arg {
         return Self::default().take();
     }
     pub fn add_validator<T: 'static + ArgValidator>(&mut self, v: T) -> &mut Self {
-        self.validators.push(Box::new(v));
+        let mut validator: Box<dyn ArgValidator> = Box::new(v);
+        if let Some(id) = validator.validator_id() {
+            if let Some(cur_validator) = self.get_mut(&id) {
+                std::mem::swap(&mut validator, cur_validator);
+                return self;
+            }
+        }
+        self.validators.push(validator);
         return self;
     }
     pub fn help(&mut self, h: impl Into<String>) -> &mut Self {
@@ -248,6 +270,19 @@ impl Arg {
     }
     pub fn optional(&mut self) -> &mut Self {
         return self.n_range(0, 1);
+    }
+
+    fn get_mut(&mut self, id: &impl PartialEq<String>) -> Option<&mut Box<dyn ArgValidator>> {
+        return self
+            .validators
+            .iter_mut()
+            .find(|validator| {
+                if let Some(validator_id) = validator.validator_id() {
+                    return id == &validator_id;
+                }
+                return false;
+            })
+            .and_then(|v| Some(v));
     }
 }
 
