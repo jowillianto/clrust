@@ -6,7 +6,6 @@ pub mod arg_key;
 pub mod argument;
 pub mod argument_parser;
 pub mod error;
-pub mod logger;
 pub mod parsed_arg;
 pub mod terminal;
 
