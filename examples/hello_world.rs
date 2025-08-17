@@ -1,4 +1,4 @@
-use clrust;
+use clrust::{self, LOGGER, LogStatus, log};
 
 #[derive(Default)]
 struct VarBuilder {}
@@ -8,7 +8,11 @@ impl clrust::ActionProvider for VarBuilder {
         app.add_argument_unchecked("--name").required().not_empty();
         app.add_help_args();
         app.parse_args();
-        println!("name: {}", app.args.first_of("--name").unwrap());
+        log!(
+            LogStatus::info(),
+            "--name: {}",
+            app.args.first_of("--name").unwrap()
+        );
     }
 }
 

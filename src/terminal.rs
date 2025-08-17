@@ -144,8 +144,8 @@ impl TerminalNodes {
         };
         return self;
     }
-    pub fn append_sub_node(&mut self, sub_nodes: Self) -> &mut Self {
-        for node in sub_nodes.nodes {
+    pub fn append_sub_node(&mut self, sub_nodes: impl Into<TerminalNodes>) -> &mut Self {
+        for node in sub_nodes.into() {
             self.append_node(node);
         }
         return self;
@@ -178,6 +178,14 @@ impl TerminalNodes {
     }
     pub fn indent(&self) -> usize {
         return self.ident;
+    }
+}
+
+impl IntoIterator for TerminalNodes {
+    type Item = TerminalNode;
+    type IntoIter = <Vec<TerminalNode> as IntoIterator>::IntoIter;
+    fn into_iter(self) -> Self::IntoIter {
+        return self.nodes.into_iter();
     }
 }
 

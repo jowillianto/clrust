@@ -4,9 +4,6 @@ use crate::parsed_arg::ParsedArg;
 use crate::terminal::TerminalNodes;
 
 pub trait ArgValidator {
-    /*
-        This will be used to prevent duplicate insertion.
-    */
     fn validator_id(&self) -> Option<String> {
         return None;
     }

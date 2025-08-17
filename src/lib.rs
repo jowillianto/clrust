@@ -6,6 +6,7 @@ pub mod arg_key;
 pub mod argument;
 pub mod argument_parser;
 pub mod error;
+pub mod logger;
 pub mod parsed_arg;
 pub mod terminal;
 
@@ -13,6 +14,10 @@ pub use action_builder::{ActionBuilder, ActionProvider};
 pub use app::App;
 pub use app_identity::AppIdentity;
 pub use app_version::AppVersion;
+pub use logger::LOGGER;
+pub use logger::LogMetadata;
+pub use logger::LogStatus;
+pub use logger::Logger;
 pub use terminal::Color;
 pub use terminal::TerminalNode;
 pub use terminal::TerminalNodes;
