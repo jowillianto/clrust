@@ -1,4 +1,3 @@
-#![deny(clippy::all)]
 pub mod action_builder;
 pub mod app;
 pub mod app_identity;

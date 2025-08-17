@@ -20,7 +20,8 @@ impl ArgStructure {
     pub fn add_argument(&mut self, k: impl Into<ArgKey> + PartialEq<ArgKey>) -> &mut Arg {
         if !self
             .parameters
-            .iter().any(|(stored_key, _)| &k == stored_key)
+            .iter()
+            .any(|(stored_key, _)| &k == stored_key)
         {
             self.parameters.push((k.into(), Arg::new()));
             &mut self.parameters.last_mut().unwrap().1
@@ -58,12 +59,12 @@ impl ArgStructure {
     ) -> Result<String, ArgParseError> {
         match arg.validate(current_value.as_ref()) {
             Err(ParseError::ValueRequired) => arg
-                .validate(values.next())
+                .validate(values.next_arg())
                 .map(|_| values.current_arg().cloned()),
             r => r.map(|_| current_value),
         }
         .map(|v| {
-            values.next();
+            values.next_arg();
             v.unwrap_or(String::from(""))
         })
         .map_err(ArgParseError::or_else(k.value()))
@@ -90,7 +91,7 @@ impl ArgStructure {
             self.positional
                 .post_validate(None, values)
                 .map_err(ArgParseError::or_else(pos_name.clone()))?;
-            values.next();
+            values.next_arg();
         }
         let mut is_parser_run = true;
         while is_parser_run && let Some(current) = values.current_arg().cloned() {
@@ -151,6 +152,9 @@ impl ArgumentParser {
     }
     pub fn len(&self) -> usize {
         self.args.len()
+    }
+    pub fn is_empty(&self) -> bool {
+        self.args.is_empty()
     }
     pub fn last_mut_arg(&mut self) -> &mut ArgStructure {
         self.arg_iter_mut().last().unwrap()

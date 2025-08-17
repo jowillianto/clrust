@@ -25,11 +25,9 @@ impl AppVersion {
 
 impl cmp::PartialOrd for AppVersion {
     fn partial_cmp(&self, other: &Self) -> Option<cmp::Ordering> {
-        if self.major > other.major {
-            Some(cmp::Ordering::Greater)
-        } else if self.major == other.major && self.minor > other.minor {
-            Some(cmp::Ordering::Greater)
-        } else if self.major == other.major && self.minor == other.minor && self.patch > other.patch
+        if self.major > other.major
+            || self.major == other.major && self.minor > other.minor
+            || self.major == other.major && self.minor == other.minor && self.patch > other.patch
         {
             Some(cmp::Ordering::Greater)
         } else if self.major == other.major

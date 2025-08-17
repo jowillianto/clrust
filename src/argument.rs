@@ -7,8 +7,7 @@ pub trait ArgValidator {
     fn validator_id(&self) -> Option<String> {
         None
     }
-    fn help(&self, _: &mut TerminalNodes) {
-    }
+    fn help(&self, _: &mut TerminalNodes) {}
     fn validate(&self, _: Option<&String>) -> Result<(), ParseError> {
         Ok(())
     }
@@ -80,6 +79,9 @@ impl ArgOptions {
     pub fn len(&self) -> usize {
         self.options.len()
     }
+    pub fn is_empty(&self) -> bool {
+        self.options.is_empty()
+    }
 
     pub fn take(&mut self) -> Self {
         std::mem::take(self)
@@ -91,7 +93,7 @@ impl ArgValidator for ArgOptions {
         Some(String::from("ArgOption"))
     }
     fn help(&self, nodes: &mut TerminalNodes) {
-        if nodes.len() == 0 {
+        if nodes.is_empty() {
             return;
         }
         nodes.append_node("Options: ").new_line();
@@ -229,10 +231,11 @@ impl Arg {
     pub fn add_validator<T: 'static + ArgValidator>(&mut self, v: T) -> &mut Self {
         let mut validator: Box<dyn ArgValidator> = Box::new(v);
         if let Some(id) = validator.validator_id()
-            && let Some(cur_validator) = self.get_mut(&id) {
-                std::mem::swap(&mut validator, cur_validator);
-                return self;
-            }
+            && let Some(cur_validator) = self.get_mut(&id)
+        {
+            std::mem::swap(&mut validator, cur_validator);
+            return self;
+        }
         self.validators.push(validator);
         self
     }
@@ -268,15 +271,12 @@ impl Arg {
     }
 
     fn get_mut(&mut self, id: &impl PartialEq<String>) -> Option<&mut Box<dyn ArgValidator>> {
-        self
-            .validators
-            .iter_mut()
-            .find(|validator| {
-                if let Some(validator_id) = validator.validator_id() {
-                    return id == &validator_id;
-                }
-                false
-            })
+        self.validators.iter_mut().find(|validator| {
+            if let Some(validator_id) = validator.validator_id() {
+                return id == &validator_id;
+            }
+            false
+        })
     }
 }
 

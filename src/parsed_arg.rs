@@ -39,6 +39,9 @@ impl PositionalParsedArgs {
     pub fn len(&self) -> usize {
         self.parameters.len()
     }
+    pub fn is_empty(&self) -> bool {
+        self.parameters.is_empty()
+    }
     pub fn param_iter(&self) -> impl Iterator<Item = &(ArgKey, String)> {
         self.parameters.iter()
     }
@@ -56,7 +59,7 @@ impl ArgIter {
     pub fn arg(&mut self) -> Option<&String> {
         self.it.peek()
     }
-    pub fn next(&mut self) -> Option<&String> {
+    pub fn next_arg(&mut self) -> Option<&String> {
         self.it.next();
         self.arg()
     }
@@ -125,7 +128,8 @@ impl ParsedArg {
     pub fn current_arg(&mut self) -> Option<&String> {
         self.it.arg()
     }
-    pub fn next(&mut self) -> Option<&String> {
-        self.it.next()
+    pub fn next_arg(&mut self) -> Option<&String> {
+        self.it.next_arg();
+        self.it.arg()
     }
 }

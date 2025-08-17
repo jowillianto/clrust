@@ -170,6 +170,9 @@ impl TerminalNodes {
     pub fn len(&self) -> usize {
         self.nodes.len()
     }
+    pub fn is_empty(&self) -> bool {
+        self.nodes.is_empty()
+    }
     pub fn iter(&self) -> impl Iterator<Item = &TerminalNode> {
         self.nodes.iter()
     }
@@ -192,9 +195,7 @@ impl IntoIterator for TerminalNodes {
 impl fmt::Display for TerminalNodes {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         for node in self.nodes.iter() {
-            if let Err(e) = write!(f, "{}", node) {
-                return Err(e);
-            }
+            write!(f, "{}", node)?
         }
         Ok(())
     }
