@@ -15,23 +15,23 @@ impl AppIdentity {
         description: impl Into<String>,
         version: AppVersion,
     ) -> Self {
-        return Self {
+        Self {
             name: name.into(),
             description: description.into(),
             author: None,
             license: None,
-            version: version,
-        };
+            version,
+        }
     }
     pub fn written_by(&mut self, author: impl Into<String>) -> &mut Self {
         self.author = Some(author.into());
-        return self;
+        self
     }
     pub fn licensed_with(&mut self, license: impl Into<String>) -> &mut Self {
         self.license = Some(license.into());
-        return self;
+        self
     }
     pub fn take(&mut self) -> Self {
-        return std::mem::take(self);
+        std::mem::take(self)
     }
 }

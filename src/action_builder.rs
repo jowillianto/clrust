@@ -25,11 +25,11 @@ impl<'a> ActionBuilder<'a> {
     pub fn new(app: &'a mut App, help_text: impl Into<String>) -> Self {
         app.add_positional().help(help_text.into());
         let arg_id = app.parser.len();
-        return Self {
+        Self {
             actions: Vec::new(),
-            app: app,
-            arg_id: arg_id,
-        };
+            app,
+            arg_id,
+        }
     }
     pub fn add_action(
         &mut self,
@@ -47,7 +47,7 @@ impl<'a> ActionBuilder<'a> {
                 help_text: help_text.into(),
             })
         }
-        return self;
+        self
     }
     pub fn run(&mut self) {
         self.update_args();
@@ -57,7 +57,7 @@ impl<'a> ActionBuilder<'a> {
             self.app.log_help(Some(1));
         }
         match self.actions.iter().find(|&a| pos_arg == &a.name) {
-            Some(action) => action.run(&mut self.app),
+            Some(action) => action.run(self.app),
             None => self.app.log_help(Some(1)),
         }
     }
@@ -68,9 +68,9 @@ impl<'a> ActionBuilder<'a> {
             .actions
             .iter()
             .fold(ArgOptions::new(), |mut prev, cur| {
-                return prev
+                prev
                     .add_option_help(cur.name.clone(), cur.help_text.clone())
-                    .take();
+                    .take()
             });
         arg.arg_mut().add_validator(options);
     }

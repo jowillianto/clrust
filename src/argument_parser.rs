@@ -12,43 +12,41 @@ pub struct ArgStructure {
 
 impl ArgStructure {
     pub fn new(arg: impl Into<Arg>) -> Self {
-        return Self {
+        Self {
             positional: arg.into(),
             parameters: Vec::new(),
-        };
+        }
     }
     pub fn add_argument(&mut self, k: impl Into<ArgKey> + PartialEq<ArgKey>) -> &mut Arg {
-        if self
+        if !self
             .parameters
-            .iter()
-            .find(|(stored_key, _)| &k == stored_key)
-            .is_none()
+            .iter().any(|(stored_key, _)| &k == stored_key)
         {
             self.parameters.push((k.into(), Arg::new()));
-            return &mut self.parameters.last_mut().unwrap().1;
+            &mut self.parameters.last_mut().unwrap().1
         } else {
-            return &mut self
+            &mut self
                 .parameters
                 .iter_mut()
                 .find(|(stored_key, _)| &k == stored_key)
                 .unwrap()
-                .1;
+                .1
         }
     }
     pub fn add_argument_unchecked(&mut self, k: impl Into<String>) -> &mut Arg {
-        return self.add_argument(ArgKey::new_unchecked(k));
+        self.add_argument(ArgKey::new_unchecked(k))
     }
     pub fn param_iter(&self) -> impl Iterator<Item = &(ArgKey, Arg)> {
-        return self.parameters.iter();
+        self.parameters.iter()
     }
     pub fn param_len(&self) -> usize {
-        return self.parameters.len();
+        self.parameters.len()
     }
     pub fn arg(&self) -> &Arg {
-        return &self.positional;
+        &self.positional
     }
     pub fn arg_mut(&mut self) -> &mut Arg {
-        return &mut self.positional;
+        &mut self.positional
     }
 
     fn parse_param(
@@ -58,7 +56,7 @@ impl ArgStructure {
         current_value: Option<String>,
         values: &mut ParsedArg,
     ) -> Result<String, ArgParseError> {
-        return match arg.validate(current_value.as_ref()) {
+        match arg.validate(current_value.as_ref()) {
             Err(ParseError::ValueRequired) => arg
                 .validate(values.next())
                 .map(|_| values.current_arg().cloned()),
@@ -66,9 +64,9 @@ impl ArgStructure {
         }
         .map(|v| {
             values.next();
-            return v.unwrap_or(String::from(""));
+            v.unwrap_or(String::from(""))
         })
-        .map_err(ArgParseError::or_else(k.value()));
+        .map_err(ArgParseError::or_else(k.value()))
     }
 
     fn parse<'a>(
@@ -117,7 +115,7 @@ impl ArgStructure {
             arg.post_validate(Some(k), values)
                 .map_err(ArgParseError::or_else(k.value()))?
         }
-        return Ok(values);
+        Ok(values)
     }
 }
 
@@ -127,35 +125,35 @@ pub struct ArgumentParser {
 
 impl ArgumentParser {
     pub fn new() -> Self {
-        return Self::default();
+        Self::default()
     }
     pub fn add_positional(&mut self) -> &mut Arg {
         self.args.push(ArgStructure {
             positional: Arg::positional(),
             parameters: Vec::new(),
         });
-        return &mut self.args.last_mut().unwrap().positional;
+        &mut self.args.last_mut().unwrap().positional
     }
     pub fn add_argument(&mut self, k: impl Into<ArgKey> + PartialEq<ArgKey>) -> &mut Arg {
-        return self.args.last_mut().unwrap().add_argument(k);
+        self.args.last_mut().unwrap().add_argument(k)
     }
     pub fn add_argument_unchecked(&mut self, k: impl Into<String>) -> &mut Arg {
-        return self.args.last_mut().unwrap().add_argument_unchecked(k);
+        self.args.last_mut().unwrap().add_argument_unchecked(k)
     }
     pub fn arg_iter_mut(&mut self) -> impl Iterator<Item = &mut ArgStructure> {
-        return self.args.iter_mut();
+        self.args.iter_mut()
     }
     pub fn arg_iter(&self) -> impl Iterator<Item = &ArgStructure> {
-        return self.args.iter();
+        self.args.iter()
     }
     pub fn last_arg(&self) -> &ArgStructure {
-        return self.arg_iter().last().unwrap();
+        self.arg_iter().last().unwrap()
     }
     pub fn len(&self) -> usize {
-        return self.args.len();
+        self.args.len()
     }
     pub fn last_mut_arg(&mut self) -> &mut ArgStructure {
-        return self.arg_iter_mut().last().unwrap();
+        self.arg_iter_mut().last().unwrap()
     }
     pub fn parse_args(&self) -> Result<ParsedArg, ArgParseError> {
         let mut args = ParsedArg::default();
@@ -176,20 +174,20 @@ impl ArgumentParser {
                 values.positional_argument_size() <= i,
             )?;
         }
-        return Ok(values);
+        Ok(values)
     }
     pub fn get(&self, id: usize) -> Option<&ArgStructure> {
-        return self.args.get(id);
+        self.args.get(id)
     }
     pub fn get_mut(&mut self, id: usize) -> Option<&mut ArgStructure> {
-        return self.args.get_mut(id);
+        self.args.get_mut(id)
     }
 }
 
 impl Default for ArgumentParser {
     fn default() -> Self {
-        return Self {
+        Self {
             args: Vec::from([ArgStructure::new(Arg::positional())]),
-        };
+        }
     }
 }

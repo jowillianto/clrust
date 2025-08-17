@@ -5,16 +5,15 @@ use crate::terminal::TerminalNodes;
 
 pub trait ArgValidator {
     fn validator_id(&self) -> Option<String> {
-        return None;
+        None
     }
-    fn help(&self, _: &mut TerminalNodes) -> () {
-        return ();
+    fn help(&self, _: &mut TerminalNodes) {
     }
     fn validate(&self, _: Option<&String>) -> Result<(), ParseError> {
-        return Ok(());
+        Ok(())
     }
     fn post_validate(&self, _: Option<&ArgKey>, _: &ParsedArg) -> Result<(), ParseError> {
-        return Ok(());
+        Ok(())
     }
 }
 
@@ -26,17 +25,17 @@ pub struct ArgOption {
 
 impl ArgOption {
     fn new(v: impl Into<String>) -> ArgOption {
-        return Self {
+        Self {
             value: v.into(),
             help_text: None,
-        };
+        }
     }
     fn help(&mut self, h: impl Into<String>) -> &mut Self {
         self.help_text = Some(h.into());
-        return self;
+        self
     }
     fn take(&mut self) -> Self {
-        return std::mem::take(self);
+        std::mem::take(self)
     }
 }
 
@@ -47,25 +46,25 @@ pub struct ArgOptions {
 
 impl ArgOptions {
     pub fn new() -> Self {
-        return Self::default();
+        Self::default()
     }
     pub fn add_option(&mut self, v: impl Into<String> + PartialEq<String>) -> &mut Self {
-        if self.iter().find(|&opt| v == opt.value).is_none() {
+        if !self.iter().any(|opt| v == opt.value) {
             self.options.push(ArgOption::new(v))
         }
-        return self;
+        self
     }
     pub fn add_option_help(
         &mut self,
         v: impl Into<String> + PartialEq<String>,
         help: impl Into<String>,
     ) -> &mut Self {
-        if let Some(opt) = self.options.iter_mut().find(|opt| &v == &opt.value) {
+        if let Some(opt) = self.options.iter_mut().find(|opt| v == opt.value) {
             opt.help(help.into());
         } else {
             self.options.push(ArgOption::new(v).help(help).take());
         }
-        return self;
+        self
     }
 
     fn check(&self, v: &impl PartialEq<String>) -> Result<(), ParseError> {
@@ -76,22 +75,22 @@ impl ArgOptions {
     }
 
     pub fn iter(&self) -> impl Iterator<Item = &ArgOption> {
-        return self.options.iter();
+        self.options.iter()
     }
     pub fn len(&self) -> usize {
-        return self.options.len();
+        self.options.len()
     }
 
     pub fn take(&mut self) -> Self {
-        return std::mem::take(self);
+        std::mem::take(self)
     }
 }
 
 impl ArgValidator for ArgOptions {
     fn validator_id(&self) -> Option<String> {
-        return Some(String::from("ArgOption"));
+        Some(String::from("ArgOption"))
     }
-    fn help(&self, nodes: &mut TerminalNodes) -> () {
+    fn help(&self, nodes: &mut TerminalNodes) {
         if nodes.len() == 0 {
             return;
         }
@@ -106,10 +105,10 @@ impl ArgValidator for ArgOptions {
         }
     }
     fn validate(&self, v: Option<&String>) -> Result<(), ParseError> {
-        return match v {
+        match v {
             None => Err(ParseError::ValueRequired),
             Some(v) => self.check(v),
-        };
+        }
     }
 }
 
@@ -121,48 +120,48 @@ struct CountValidator {
 
 impl CountValidator {
     pub fn range(min_size: usize, max_size: usize) -> Self {
-        return Self { min_size, max_size };
+        Self { min_size, max_size }
     }
     pub fn at_least(min_size: usize) -> Self {
-        return Self {
-            min_size: min_size,
+        Self {
+            min_size,
             max_size: usize::MAX,
-        };
+        }
     }
     pub fn at_most(max_size: usize) -> Self {
-        return Self {
+        Self {
             min_size: 0,
-            max_size: max_size,
-        };
+            max_size,
+        }
     }
     pub fn equal_to(v: usize) -> Self {
-        return Self {
+        Self {
             min_size: v,
             max_size: v,
-        };
+        }
     }
     fn check(&self, count: usize) -> Result<(), ParseError> {
         if count < self.min_size || count > self.max_size {
             return Err(ParseError::TooManyOrTooLittleValue);
         }
-        return Ok(());
+        Ok(())
     }
 }
 
 impl Default for CountValidator {
     fn default() -> Self {
-        return Self {
+        Self {
             max_size: 1,
             min_size: 1,
-        };
+        }
     }
 }
 
 impl ArgValidator for CountValidator {
     fn validator_id(&self) -> Option<String> {
-        return Some(String::from("CountValidator"));
+        Some(String::from("CountValidator"))
     }
-    fn help(&self, nodes: &mut TerminalNodes) -> () {
+    fn help(&self, nodes: &mut TerminalNodes) {
         if self.min_size == self.max_size && self.min_size != 1 {
             nodes
                 .append_node(format!("Arg Count: ={}", self.min_size))
@@ -186,7 +185,7 @@ impl ArgValidator for CountValidator {
         if let Some(key) = key {
             return self.check(args.count(key));
         }
-        return self.check(1);
+        self.check(1)
     }
 }
 
@@ -195,19 +194,19 @@ struct EmptyValidator {}
 
 impl ArgValidator for EmptyValidator {
     fn validator_id(&self) -> Option<String> {
-        return Some(String::from("EmptyValidator"));
+        Some(String::from("EmptyValidator"))
     }
-    fn help(&self, nodes: &mut TerminalNodes) -> () {
+    fn help(&self, nodes: &mut TerminalNodes) {
         nodes.append_node("AllowEmpty: False");
     }
     fn validate(&self, v: Option<&String>) -> Result<(), ParseError> {
-        return match v {
+        match v {
             None => Err(ParseError::ValueRequired),
             Some(_) => Ok(()),
-        };
+        }
     }
     fn post_validate(&self, _: Option<&ArgKey>, _: &ParsedArg) -> Result<(), ParseError> {
-        return Ok(());
+        Ok(())
     }
 }
 
@@ -219,72 +218,70 @@ pub struct Arg {
 
 impl Arg {
     pub fn new() -> Self {
-        return Self::default();
+        Self::default()
     }
     pub fn positional() -> Self {
-        return Self::default().n_equal_to(1).take();
+        Self::default().n_equal_to(1).take()
     }
     pub fn flag() -> Self {
-        return Self::default().take();
+        Self::default().take()
     }
     pub fn add_validator<T: 'static + ArgValidator>(&mut self, v: T) -> &mut Self {
         let mut validator: Box<dyn ArgValidator> = Box::new(v);
-        if let Some(id) = validator.validator_id() {
-            if let Some(cur_validator) = self.get_mut(&id) {
+        if let Some(id) = validator.validator_id()
+            && let Some(cur_validator) = self.get_mut(&id) {
                 std::mem::swap(&mut validator, cur_validator);
                 return self;
             }
-        }
         self.validators.push(validator);
-        return self;
+        self
     }
     pub fn help(&mut self, h: impl Into<String>) -> &mut Self {
         self.help_text = Some(h.into());
-        return self;
+        self
     }
     pub fn take(&mut self) -> Self {
-        return std::mem::take(self);
+        std::mem::take(self)
     }
 
     // Builder Functions
     pub fn n_at_least(&mut self, min_size: usize) -> &mut Self {
-        return self.add_validator(CountValidator::at_least(min_size));
+        self.add_validator(CountValidator::at_least(min_size))
     }
     pub fn n_at_most(&mut self, max_size: usize) -> &mut Self {
-        return self.add_validator(CountValidator::at_most(max_size));
+        self.add_validator(CountValidator::at_most(max_size))
     }
     pub fn n_equal_to(&mut self, v: usize) -> &mut Self {
-        return self.add_validator(CountValidator::equal_to(v));
+        self.add_validator(CountValidator::equal_to(v))
     }
     pub fn n_range(&mut self, min_size: usize, max_size: usize) -> &mut Self {
-        return self.add_validator(CountValidator::range(min_size, max_size));
+        self.add_validator(CountValidator::range(min_size, max_size))
     }
     pub fn not_empty(&mut self) -> &mut Self {
-        return self.add_validator(EmptyValidator::default());
+        self.add_validator(EmptyValidator::default())
     }
     pub fn required(&mut self) -> &mut Self {
-        return self.not_empty().n_equal_to(1);
+        self.not_empty().n_equal_to(1)
     }
     pub fn optional(&mut self) -> &mut Self {
-        return self.n_range(0, 1);
+        self.n_range(0, 1)
     }
 
     fn get_mut(&mut self, id: &impl PartialEq<String>) -> Option<&mut Box<dyn ArgValidator>> {
-        return self
+        self
             .validators
             .iter_mut()
             .find(|validator| {
                 if let Some(validator_id) = validator.validator_id() {
                     return id == &validator_id;
                 }
-                return false;
+                false
             })
-            .and_then(|v| Some(v));
     }
 }
 
 impl ArgValidator for Arg {
-    fn help(&self, nodes: &mut TerminalNodes) -> () {
+    fn help(&self, nodes: &mut TerminalNodes) {
         if let Some(h) = &self.help_text {
             nodes.append_node(h).new_line();
         }
@@ -295,14 +292,14 @@ impl ArgValidator for Arg {
     }
     fn validate(&self, v: Option<&String>) -> Result<(), ParseError> {
         for validator in self.validators.iter() {
-            validator.validate(v.clone())?;
+            validator.validate(v)?;
         }
-        return Ok(());
+        Ok(())
     }
     fn post_validate(&self, key: Option<&ArgKey>, args: &ParsedArg) -> Result<(), ParseError> {
         for validator in self.validators.iter() {
-            validator.post_validate(key.clone(), args)?;
+            validator.post_validate(key, args)?;
         }
-        return Ok(());
+        Ok(())
     }
 }

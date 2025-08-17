@@ -14,7 +14,7 @@ pub struct OutputFormat {
 }
 impl Default for OutputFormat {
     fn default() -> Self {
-        return Self {
+        Self {
             error: TextFormat::new()
                 .bg(Color::Yellow)
                 .effect(TextEffect::Bold)
@@ -23,7 +23,7 @@ impl Default for OutputFormat {
                 .bg(Color::Green)
                 .effect(TextEffect::Bold)
                 .take(),
-        };
+        }
     }
 }
 
@@ -37,32 +37,32 @@ pub struct App {
 impl App {
     pub fn new(identity: AppIdentity) -> Self {
         let mut app = Self {
-            identity: identity,
+            identity,
             parser: ArgumentParser::default(),
             args: ParsedArg::default(),
             format: OutputFormat::default(),
         };
         app.add_help_args();
-        return app;
+        app
     }
     pub fn error_format(&mut self, f: TextFormat) -> &mut Self {
         self.format.error = f;
-        return self;
+        self
     }
     pub fn help_format(&mut self, f: TextFormat) -> &mut Self {
         self.format.help = f;
-        return self;
+        self
     }
     pub fn add_positional(&mut self) -> &mut Arg {
         self.parser.add_positional();
         self.add_help_args();
-        return self.parser.last_mut_arg().arg_mut();
+        self.parser.last_mut_arg().arg_mut()
     }
     pub fn add_argument(&mut self, key: impl Into<ArgKey> + PartialEq<ArgKey>) -> &mut Arg {
-        return self.parser.add_argument(key);
+        self.parser.add_argument(key)
     }
     pub fn add_argument_unchecked(&mut self, key: impl Into<String>) -> &mut Arg {
-        return self.parser.add_argument_unchecked(key);
+        self.parser.add_argument_unchecked(key)
     }
     pub fn add_help_args(&mut self) {
         self.parser
@@ -75,7 +75,7 @@ impl App {
             .optional();
     }
     pub fn advanced_parse_args(&mut self, auto_help: bool) {
-        return match self.parser.parse_mut_args(&mut self.args) {
+        match self.parser.parse_mut_args(&mut self.args) {
             Ok(args) => {
                 let help_arg_count = args.count("-h") + args.count("--help");
                 if auto_help && help_arg_count != 0 {
@@ -89,7 +89,7 @@ impl App {
                 }
                 self.log_err_and_exit(e, Some(1));
             }
-        };
+        }
     }
     pub fn parse_args(&mut self) {
         self.advanced_parse_args(true);
@@ -138,11 +138,11 @@ impl App {
     }
 
     pub fn format_err(&self, node: impl Into<TerminalNode>) -> TerminalNodes {
-        return TerminalNodes::with_format(self.format.error.clone(), node, 0);
+        TerminalNodes::with_format(self.format.error.clone(), node, 0)
     }
 
     pub fn format_help(&self, node: impl Into<TerminalNode>) -> TerminalNodes {
-        return TerminalNodes::with_format(self.format.help.clone(), node, 0);
+        TerminalNodes::with_format(self.format.help.clone(), node, 0)
     }
 
     pub fn log_err_and_exit(&self, e: impl fmt::Display, err_code: Option<i32>) -> ! {

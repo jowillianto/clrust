@@ -53,34 +53,34 @@ impl TextFormat {
     }
     pub fn bg(&mut self, color: Color) -> &mut Self {
         self.bg = Some(color);
-        return self;
+        self
     }
     pub fn fg(&mut self, color: Color) -> &mut Self {
         self.fg = Some(color);
-        return self;
+        self
     }
     pub fn effect(&mut self, effect: TextEffect) -> &mut Self {
         self.effects.insert(effect);
-        return self;
+        self
     }
     pub fn effects<I: IntoIterator<Item = TextEffect>>(&mut self, effects: I) -> &mut Self {
         self.effects.extend(effects);
-        return self;
+        self
     }
     pub fn has_effect(&self, effect: &impl PartialEq<TextEffect>) -> bool {
-        return self.effects.iter().find(|&e| effect == e).is_some();
+        self.effects.iter().any(|e| effect == e)
     }
     pub fn len_effects(&self) -> usize {
-        return self.effects.len();
+        self.effects.len()
     }
     pub fn get_bg(&self) -> Option<&Color> {
-        return self.bg.as_ref();
+        self.bg.as_ref()
     }
     pub fn get_fg(&self) -> Option<&Color> {
-        return self.fg.as_ref();
+        self.fg.as_ref()
     }
     pub fn take(&mut self) -> Self {
-        return std::mem::take(self);
+        std::mem::take(self)
     }
 }
 
@@ -95,13 +95,13 @@ pub enum TerminalNode {
 
 impl From<TextFormat> for TerminalNode {
     fn from(value: TextFormat) -> Self {
-        return Self::Begin(value);
+        Self::Begin(value)
     }
 }
 
 impl<T: Into<String>> From<T> for TerminalNode {
     fn from(value: T) -> Self {
-        return Self::Text(value.into());
+        Self::Text(value.into())
     }
 }
 
@@ -113,23 +113,23 @@ pub struct TerminalNodes {
 
 impl Default for TerminalNodes {
     fn default() -> Self {
-        return Self::new(0);
+        Self::new(0)
     }
 }
 
 impl TerminalNodes {
     pub fn new(ident: usize) -> Self {
-        return Self {
+        Self {
             ident,
             nodes: Vec::from([TerminalNode::Indent(ident)]),
-        };
+        }
     }
     pub fn with_format(fmt: TextFormat, node: impl Into<TerminalNode>, ident: usize) -> Self {
-        return Self::new(ident)
+        Self::new(ident)
             .begin_format(fmt)
             .append_node(node)
             .end_format()
-            .clone();
+            .clone()
     }
     pub fn append_node(&mut self, n: impl Into<TerminalNode>) -> &mut Self {
         match self.nodes.last() {
@@ -142,24 +142,24 @@ impl TerminalNodes {
                 self.nodes.push(n.into());
             }
         };
-        return self;
+        self
     }
     pub fn append_sub_node(&mut self, sub_nodes: impl Into<TerminalNodes>) -> &mut Self {
         for node in sub_nodes.into() {
             self.append_node(node);
         }
-        return self;
+        self
     }
     pub fn begin_format(&mut self, fmt: impl Into<TextFormat>) -> &mut Self {
         self.append_node(fmt.into());
-        return self;
+        self
     }
     pub fn end_format(&mut self) -> &mut Self {
         self.nodes.push(TerminalNode::End);
-        return self;
+        self
     }
     pub fn new_line(&mut self) -> &mut Self {
-        return self.append_node(TerminalNode::NewLine);
+        self.append_node(TerminalNode::NewLine)
     }
     pub fn to_stdout(&self) {
         std::println!("{}", self);
@@ -168,16 +168,16 @@ impl TerminalNodes {
         std::eprintln!("{}", self);
     }
     pub fn len(&self) -> usize {
-        return self.nodes.len();
+        self.nodes.len()
     }
     pub fn iter(&self) -> impl Iterator<Item = &TerminalNode> {
-        return self.nodes.iter();
+        self.nodes.iter()
     }
     pub fn take(&mut self) -> Self {
-        return std::mem::take(self);
+        std::mem::take(self)
     }
     pub fn indent(&self) -> usize {
-        return self.ident;
+        self.ident
     }
 }
 
@@ -185,7 +185,7 @@ impl IntoIterator for TerminalNodes {
     type Item = TerminalNode;
     type IntoIter = <Vec<TerminalNode> as IntoIterator>::IntoIter;
     fn into_iter(self) -> Self::IntoIter {
-        return self.nodes.into_iter();
+        self.nodes.into_iter()
     }
 }
 
@@ -196,7 +196,7 @@ impl fmt::Display for TerminalNodes {
                 return Err(e);
             }
         }
-        return Ok(());
+        Ok(())
     }
 }
 
@@ -263,7 +263,7 @@ impl fmt::Display for TerminalNode {
             TerminalNode::End => write!(f, "\x1b[0m"),
             TerminalNode::Text(text) => f.write_str(text),
             TerminalNode::Indent(ident) => write!(f, "{:1$}", "", ident),
-            TerminalNode::NewLine => write!(f, "\n"),
+            TerminalNode::NewLine => writeln!(f),
         }
     }
 }
