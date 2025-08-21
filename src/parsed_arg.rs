@@ -113,6 +113,12 @@ impl ParsedArg {
     pub fn arg_iter(&self) -> impl Iterator<Item = &PositionalParsedArgs> {
         self.args.iter()
     }
+    pub fn len(&self) -> usize {
+        self.args.len()
+    }
+    pub fn is_empty(&self) -> bool {
+        self.args.is_empty()
+    }
 
     // For use with parsing
     pub fn add_positional(&mut self, value: impl Into<String>) -> &mut Self {

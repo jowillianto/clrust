@@ -1,5 +1,3 @@
-use clrust;
-
 #[derive(Default)]
 struct VarBuilder {}
 

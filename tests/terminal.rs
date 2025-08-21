@@ -333,7 +333,7 @@ fn test_terminal_append_sub_node() {
     let result = main_nodes.append_node("main").append_sub_node(sub_nodes);
 
     // Should return self for chaining
-    assert!(std::ptr::eq(result, &mut main_nodes));
+    assert!(std::ptr::eq(result, &main_nodes));
 
     // Should have: Indent(2), Text("main"), + all sub_nodes
     assert_eq!(main_nodes.len(), 2 + sub_len);

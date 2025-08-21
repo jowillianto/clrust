@@ -7,6 +7,7 @@ use crate::{
     terminal::{Color, TerminalNode, TerminalNodes, TextEffect, TextFormat},
 };
 use core::fmt;
+use std::cmp::max;
 
 pub struct OutputFormat {
     error: TextFormat,
@@ -96,41 +97,63 @@ impl App {
     }
     pub fn log_help(&self, exit_code: Option<i32>) -> ! {
         let exit_code = exit_code.unwrap_or(0);
-        let mut nodes = TerminalNodes::default()
-            .begin_format(self.format.help.clone())
-            .append_node("command: ")
-            .take();
+        let mut nodes = TerminalNodes::default();
+        // Format App Identity
+        nodes
+            .append_node(format!("{} v{}", self.identity.name, self.identity.version))
+            .new_line();
+        if !self.identity.description.is_empty() {
+            nodes
+                .append_node(self.identity.description.clone())
+                .new_line();
+        }
+        if let Some(author) = &self.identity.author {
+            nodes.append_node(format!("By {}", author)).new_line();
+        }
+        if let Some(license) = &self.identity.license {
+            nodes
+                .append_node(format!("License: {}", license))
+                .new_line();
+        }
+        nodes.new_line();
+
+        // Parsed Arguments
         for arg in self.args.arg_iter() {
             nodes
                 .append_node(arg.arg())
                 .append_node(TerminalNode::Indent(1));
         }
-        nodes.new_line();
-        let mut beg_id = self.args.positional_argument_size();
-        for structure in self
+        if !self.args.is_empty() {
+            nodes.new_line();
+        }
+
+        nodes.begin_format(self.format.help.clone());
+        let start_id = max(0, self.args.len() as i32 - 1) as usize;
+        for (cur_arg_id, structure) in self
             .parser
             .arg_iter()
+            .enumerate()
             .skip(self.args.positional_argument_size() - 1)
         {
-            if beg_id != self.args.positional_argument_size() {
-                nodes
-                    .new_line()
-                    .append_node(format!("arg{}", beg_id))
-                    .new_line();
-                let mut sub_node = TerminalNodes::new(2);
-                ArgValidator::help(structure.arg(), &mut sub_node);
-                nodes.append_sub_node(sub_node);
+            let print_cur_pos = cur_arg_id > start_id;
+            let mut sub_nodes = match print_cur_pos {
+                true => TerminalNodes::new(2),
+                false => TerminalNodes::new(0),
+            };
+            if print_cur_pos {
+                nodes.append_node(format!("arg{}", cur_arg_id)).new_line();
+                ArgValidator::help(structure.arg(), &mut sub_nodes);
             }
             if structure.param_len() != 0 {
-                nodes.append_node("Keyword Arguments").new_line();
+                sub_nodes.append_node("Keyword Arguments: ").new_line();
             }
             for (k, v) in structure.param_iter() {
-                nodes.append_node(k.value()).append_node(" : ").new_line();
-                let mut sub_node = TerminalNodes::new(2);
-                ArgValidator::help(v, &mut sub_node);
-                nodes.append_sub_node(sub_node);
+                sub_nodes.append_node(format!("{}: ", k.value())).new_line();
+                let mut sub_sub_nodes: TerminalNodes = TerminalNodes::new(2);
+                ArgValidator::help(v, &mut sub_sub_nodes);
+                sub_nodes.append_sub_node(sub_sub_nodes);
             }
-            beg_id += 1;
+            nodes.append_sub_node(sub_nodes);
         }
         nodes.end_format();
         nodes.to_stdout();

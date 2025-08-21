@@ -165,9 +165,7 @@ impl ArgValidator for CountValidator {
     }
     fn help(&self, nodes: &mut TerminalNodes) {
         if self.min_size == self.max_size && self.min_size != 1 {
-            nodes
-                .append_node(format!("Arg Count: ={}", self.min_size))
-                .new_line();
+            nodes.append_node(format!("Arg Count: ={}", self.min_size));
         } else if self.min_size == 0 && self.max_size == 1 {
             nodes.append_node("Optional");
         } else if self.min_size == 1 && self.max_size == 1 {
@@ -175,13 +173,12 @@ impl ArgValidator for CountValidator {
         } else if self.min_size != 1 && self.max_size == usize::MAX {
             nodes.append_node(format!("Arg Count: n >= {}", self.min_size));
         } else {
-            nodes
-                .append_node(format!(
-                    "Arg Count: {} <= n <= {}",
-                    self.min_size, self.max_size
-                ))
-                .new_line();
+            nodes.append_node(format!(
+                "Arg Count: {} <= n <= {}",
+                self.min_size, self.max_size
+            ));
         }
+        nodes.new_line();
     }
     fn post_validate(&self, key: Option<&ArgKey>, args: &ParsedArg) -> Result<(), ParseError> {
         if let Some(key) = key {
@@ -192,19 +189,29 @@ impl ArgValidator for CountValidator {
 }
 
 #[derive(Debug, Default, Clone)]
-struct EmptyValidator {}
+struct EmptyValidator {
+    allow_empty: bool,
+}
+
+impl EmptyValidator {
+    fn new(allow_empty: bool) -> Self {
+        Self { allow_empty }
+    }
+}
 
 impl ArgValidator for EmptyValidator {
     fn validator_id(&self) -> Option<String> {
         Some(String::from("EmptyValidator"))
     }
     fn help(&self, nodes: &mut TerminalNodes) {
-        nodes.append_node("AllowEmpty: False");
+        if self.allow_empty {
+            nodes.append_node("Flag").new_line();
+        }
     }
     fn validate(&self, v: Option<&String>) -> Result<(), ParseError> {
-        match v {
-            None => Err(ParseError::ValueRequired),
-            Some(_) => Ok(()),
+        match (self.allow_empty, v) {
+            (false, None) => Err(ParseError::ValueRequired),
+            _ => Ok(()),
         }
     }
     fn post_validate(&self, _: Option<&ArgKey>, _: &ParsedArg) -> Result<(), ParseError> {
@@ -226,7 +233,7 @@ impl Arg {
         Self::default().n_equal_to(1).take()
     }
     pub fn flag() -> Self {
-        Self::default().take()
+        Self::default().as_flag().optional().take()
     }
     pub fn add_validator<T: 'static + ArgValidator>(&mut self, v: T) -> &mut Self {
         let mut validator: Box<dyn ArgValidator> = Box::new(v);
@@ -261,13 +268,16 @@ impl Arg {
         self.add_validator(CountValidator::range(min_size, max_size))
     }
     pub fn not_empty(&mut self) -> &mut Self {
-        self.add_validator(EmptyValidator::default())
+        self.add_validator(EmptyValidator::new(false))
     }
     pub fn required(&mut self) -> &mut Self {
         self.not_empty().n_equal_to(1)
     }
     pub fn optional(&mut self) -> &mut Self {
         self.n_range(0, 1)
+    }
+    pub fn as_flag(&mut self) -> &mut Self {
+        self.add_validator(EmptyValidator::new(true))
     }
 
     fn get_mut(&mut self, id: &impl PartialEq<String>) -> Option<&mut Box<dyn ArgValidator>> {
@@ -287,7 +297,6 @@ impl ArgValidator for Arg {
         }
         for validator in self.validators.iter() {
             validator.help(nodes);
-            nodes.new_line();
         }
     }
     fn validate(&self, v: Option<&String>) -> Result<(), ParseError> {

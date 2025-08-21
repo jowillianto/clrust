@@ -23,7 +23,7 @@ impl ArgStructure {
             .iter()
             .any(|(stored_key, _)| &k == stored_key)
         {
-            self.parameters.push((k.into(), Arg::new()));
+            self.parameters.push((k.into(), Arg::flag()));
             &mut self.parameters.last_mut().unwrap().1
         } else {
             &mut self
