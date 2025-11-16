@@ -1,26 +1,29 @@
-#[derive(Default)]
-struct VarBuilder {}
-
-impl clrust::ActionProvider for VarBuilder {
-    fn run(&self, app: &mut clrust::App) {
-        app.add_argument_unchecked("--name").required().not_empty();
-        app.add_help_args();
-        app.parse_args();
-    }
-}
+use clrust::{App, AppIdentity, AppVersion, Arg, ArgEmptyValidator};
 
 fn main() {
-    let mut app = clrust::App::new(clrust::AppIdentity::new(
+    let identity = AppIdentity::new(
         "Hello World",
-        "A Hello World",
-        clrust::AppVersion {
-            major: 0,
-            minor: 0,
-            patch: 0,
-        },
-    ));
+        "Greets the provided name or defaults to world.",
+        AppVersion::new(0, 1, 0),
+    );
+    let mut app = App::new(identity);
+    app.add_argument(
+        "--name",
+        Arg::new()
+            .help("Name to greet")
+            .validate(ArgEmptyValidator::require_value())
+            .optional(),
+    );
 
-    clrust::ActionBuilder::new(&mut app, "HEYYY")
-        .add_action("hey", "HEY HEY", VarBuilder::default())
-        .run();
+    if app.parse_args(true, true).is_err() {
+        return;
+    }
+
+    let greeting = app
+        .args()
+        .first_of("--name")
+        .map(|name| format!("Hello, {name}!"))
+        .unwrap_or_else(|| "Hello, world!".into());
+
+    println!("{greeting}");
 }

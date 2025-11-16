@@ -15,3 +15,10 @@ proc-macro = true
 [[example]]
 name = "hello_world"
 path = "examples/hello_world.rs"
+[[example]]
+name = "main"
+path = "examples/main.rs"
+
+[[example]]
+name = "main"
+path = "examples/main.rs"

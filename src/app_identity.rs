@@ -1,6 +1,8 @@
-use crate::app_version::AppVersion;
+use std::fmt;
 
-#[derive(Clone, Debug, Default)]
+use crate::AppVersion;
+
+#[derive(Debug, Clone)]
 pub struct AppIdentity {
     pub name: String,
     pub description: String,
@@ -23,15 +25,30 @@ impl AppIdentity {
             version,
         }
     }
-    pub fn written_by(&mut self, author: impl Into<String>) -> &mut Self {
+
+    pub fn author(mut self, author: impl Into<String>) -> Self {
         self.author = Some(author.into());
         self
     }
-    pub fn licensed_with(&mut self, license: impl Into<String>) -> &mut Self {
+
+    pub fn license(mut self, license: impl Into<String>) -> Self {
         self.license = Some(license.into());
         self
     }
-    pub fn take(&mut self) -> Self {
-        std::mem::take(self)
+}
+
+impl fmt::Display for AppIdentity {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        writeln!(f, "{} v{}", self.name, self.version)?;
+        if !self.description.is_empty() {
+            writeln!(f, "{}", self.description)?;
+        }
+        if let Some(author) = &self.author {
+            writeln!(f, "Written by : {}", author)?;
+        }
+        if let Some(license) = &self.license {
+            writeln!(f, "{}", license)?;
+        }
+        Ok(())
     }
 }

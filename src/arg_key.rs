@@ -1,65 +1,62 @@
-use crate::error::ParseError;
+use std::fmt::Display;
 
-#[derive(Clone, Debug)]
+use crate::ParseError;
+
+#[derive(Debug, Clone)]
 pub struct ArgKey {
-    value: String,
+    pub value: String,
 }
 
 impl ArgKey {
-    pub fn is_arg_key(value: &str) -> bool {
-        value.starts_with('-')
+    pub fn is_arg_key(k: &str) -> bool {
+        (k.starts_with("--") && k.len() > 2) || (k.starts_with("-") && k.len() == 2)
     }
-    pub fn new(value: &str) -> Result<ArgKey, ParseError> {
-        if Self::is_arg_key(value) {
-            Ok(ArgKey {
-                value: String::from(value),
-            })
-        } else {
-            Err(ParseError::InvalidKey)
+
+    pub fn make(k: &str) -> Result<Self, ParseError> {
+        match Self::is_arg_key(k) {
+            true => Ok(Self::make_unchecked(k)),
+            false => Err(ParseError::not_argument_key(k)),
         }
     }
-    pub fn new_unchecked(value: impl Into<String>) -> Self {
-        Self {
-            value: value.into(),
+
+    fn make_unchecked(k: &str) -> Self {
+        Self { value: k.into() }
+    }
+
+    pub fn parse_arg(k: &str) -> Result<(Self, Option<&str>), ParseError> {
+        if !Self::is_arg_key(k) {
+            return Err(ParseError::not_argument_key(k));
         }
-    }
-    pub fn value(&self) -> &String {
-        &self.value
-    }
-    pub fn from_cmd(arg: &str) -> Result<(ArgKey, Option<String>), ParseError> {
-        match Self::is_arg_key(arg) {
-            true => match arg.find('=') {
-                Some(eq_pos) => unsafe {
-                    let key = String::from(arg.get_unchecked(..eq_pos));
-                    let value = String::from(arg.get_unchecked(eq_pos + 1..));
-                    Ok((Self { value: key }, Some(value)))
-                },
-                None => Ok((
-                    Self {
-                        value: String::from(arg),
-                    },
-                    None,
-                )),
-            },
-            false => Err(ParseError::InvalidKey),
+        match k.find("=") {
+            None => Ok((ArgKey::make_unchecked(k), None)),
+            Some(eq_pos) => {
+                let (pre_eq, post_eq) = k.split_at(eq_pos);
+                Ok((ArgKey::make_unchecked(pre_eq), Some(post_eq)))
+            }
         }
     }
 }
 
 impl From<ArgKey> for String {
-    fn from(value: ArgKey) -> Self {
-        value.value
+    fn from(k: ArgKey) -> Self {
+        k.value
     }
 }
 
-impl<T: PartialEq<String>> PartialEq<T> for ArgKey {
-    fn eq(&self, other: &T) -> bool {
-        other == &self.value
-    }
-}
 impl PartialEq<ArgKey> for str {
     fn eq(&self, other: &ArgKey) -> bool {
         other.value == self
     }
 }
-impl Eq for ArgKey {}
+
+impl PartialEq<ArgKey> for ArgKey {
+    fn eq(&self, other: &ArgKey) -> bool {
+        other.value == self.value
+    }
+}
+
+impl Display for ArgKey {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{}", self.value)
+    }
+}

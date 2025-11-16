@@ -1,10 +1,7 @@
 use std::cmp;
 use std::fmt;
-use std::num::ParseIntError;
-pub enum AppVersionParseError {
-    OutOfBounds,
-    IntegerParse(ParseIntError),
-}
+
+use crate::ParseError;
 
 #[derive(Default, cmp::PartialEq, Copy, Debug, Clone)]
 pub struct AppVersion {
@@ -47,20 +44,20 @@ impl fmt::Display for AppVersion {
 }
 
 impl TryFrom<&str> for AppVersion {
-    type Error = AppVersionParseError;
-    fn try_from(v: &str) -> Result<AppVersion, AppVersionParseError> {
+    type Error = ParseError;
+    fn try_from(v: &str) -> Result<AppVersion, ParseError> {
         let mut split_it = v.split('.');
         let major_s = split_it.next();
         if major_s.is_none() {
-            return Err(AppVersionParseError::OutOfBounds);
+            return Err(ParseError::invalid_value(v));
         }
         let minor_s = split_it.next();
         if minor_s.is_none() {
-            return Err(AppVersionParseError::OutOfBounds);
+            return Err(ParseError::invalid_value(v));
         }
         let patch_s = split_it.next();
         if patch_s.is_none() {
-            return Err(AppVersionParseError::OutOfBounds);
+            return Err(ParseError::invalid_value(v));
         }
         match major_s.unwrap().parse::<u32>() {
             Ok(major) => match minor_s.unwrap().parse::<u32>() {
@@ -70,11 +67,11 @@ impl TryFrom<&str> for AppVersion {
                         minor,
                         patch,
                     }),
-                    Err(e) => Err(AppVersionParseError::IntegerParse(e)),
+                    Err(_) => Err(ParseError::invalid_value(v)),
                 },
-                Err(e) => Err(AppVersionParseError::IntegerParse(e)),
+                Err(_) => Err(ParseError::invalid_value(v)),
             },
-            Err(e) => Err(AppVersionParseError::IntegerParse(e)),
+            Err(_) => Err(ParseError::invalid_value(v)),
         }
     }
 }

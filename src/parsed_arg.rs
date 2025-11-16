@@ -1,141 +1,74 @@
-use crate::arg_key::ArgKey;
-use std::iter::Peekable;
+use crate::ArgKey;
 
-#[derive(Debug, Clone)]
-pub struct PositionalParsedArgs {
+#[derive(Debug)]
+struct ParamTier {
     value: String,
-    parameters: Vec<(ArgKey, String)>,
+    params: Vec<(ArgKey, String)>,
 }
 
-impl PositionalParsedArgs {
-    pub fn new(value: impl Into<String>) -> Self {
-        Self {
-            value: value.into(),
-            parameters: Vec::new(),
-        }
+#[derive(Debug)]
+pub struct ParsedArg {
+    values: Vec<ParamTier>,
+}
+
+impl Default for ParsedArg {
+    fn default() -> Self {
+        Self::new()
     }
-    pub fn add_argument(&mut self, key: impl Into<ArgKey>, value: impl Into<String>) -> &mut Self {
-        self.parameters.push((key.into(), value.into()));
+}
+
+impl ParsedArg {
+    // Modification Functions
+    pub fn new() -> Self {
+        let mut parsed = Self { values: Vec::new() };
+        parsed.add_positional_argument(std::env::args().next().unwrap());
+        parsed
+    }
+    pub fn add_positional_argument(&mut self, v: impl Into<String>) -> &mut Self {
+        self.values.push(ParamTier {
+            value: v.into(),
+            params: Vec::new(),
+        });
         self
     }
-    pub fn first_of(&self, key: &(impl PartialEq<ArgKey> + ?Sized)) -> Option<&(ArgKey, String)> {
-        self.parameters.iter().find(|&arg| key == &arg.0)
+    pub fn add_argument(&mut self, k: impl Into<ArgKey>, v: impl Into<String>) -> &mut Self {
+        self.values
+            .last_mut()
+            .unwrap()
+            .params
+            .push((k.into(), v.into()));
+        self
+    }
+    pub fn arg(&self) -> &str {
+        &self.values.last().unwrap().value
+    }
+    pub fn param_iter(&self) -> impl Iterator<Item = &(ArgKey, String)> {
+        self.values.last().unwrap().params.iter()
+    }
+    pub fn len(&self) -> usize {
+        self.values.len()
+    }
+    pub fn is_empty(&self) -> bool {
+        self.values.is_empty()
+    }
+
+    // Query Function
+    pub fn first_of(&self, k: &(impl PartialEq<ArgKey> + ?Sized)) -> Option<&String> {
+        match self.param_iter().find(|&(param_key, _)| k == param_key) {
+            None => None,
+            Some((_, v)) => Some(v),
+        }
     }
     pub fn filter<'a>(
         &'a self,
         key: &(impl PartialEq<ArgKey> + ?Sized),
     ) -> impl Iterator<Item = &'a (ArgKey, String)> {
-        self.parameters.iter().filter(move |&arg| key == &arg.0)
+        self.param_iter().filter(move |&arg| key == &arg.0)
     }
     pub fn count(&self, key: &(impl PartialEq<ArgKey> + ?Sized)) -> usize {
         self.filter(key).count()
     }
     pub fn contains(&self, key: &(impl PartialEq<ArgKey> + ?Sized)) -> bool {
         self.first_of(key).is_some()
-    }
-    pub fn arg(&self) -> &String {
-        &self.value
-    }
-    pub fn len(&self) -> usize {
-        self.parameters.len()
-    }
-    pub fn is_empty(&self) -> bool {
-        self.parameters.is_empty()
-    }
-    pub fn param_iter(&self) -> impl Iterator<Item = &(ArgKey, String)> {
-        self.parameters.iter()
-    }
-}
-
-#[derive(Debug)]
-pub struct ArgIter {
-    it: Peekable<std::env::Args>,
-}
-
-impl ArgIter {
-    pub fn new() -> Self {
-        Self::default()
-    }
-    pub fn arg(&mut self) -> Option<&String> {
-        self.it.peek()
-    }
-    pub fn next_arg(&mut self) -> Option<&String> {
-        self.it.next();
-        self.arg()
-    }
-}
-
-impl Default for ArgIter {
-    fn default() -> Self {
-        Self {
-            it: std::env::args().peekable(),
-        }
-    }
-}
-
-#[derive(Debug, Default)]
-pub struct ParsedArg {
-    args: Vec<PositionalParsedArgs>,
-    it: ArgIter,
-}
-
-impl ParsedArg {
-    pub fn current_positional(&self) -> &String {
-        &self.args.last().unwrap().value
-    }
-    pub fn first_of(&self, key: &(impl PartialEq<ArgKey> + ?Sized)) -> Option<&String> {
-        match self.args.last().unwrap().first_of(key) {
-            Some(arg) => Some(&arg.1),
-            None => None,
-        }
-    }
-    pub fn filter<'a>(
-        &'a self,
-        key: &(impl PartialEq<ArgKey> + ?Sized),
-    ) -> impl Iterator<Item = &'a String> {
-        self.args.last().unwrap().filter(key).map(|arg| &arg.1)
-    }
-    pub fn count(&self, key: &(impl PartialEq<ArgKey> + ?Sized)) -> usize {
-        self.args.last().unwrap().count(key)
-    }
-    pub fn contains(&self, key: &(impl PartialEq<ArgKey> + ?Sized)) -> bool {
-        self.args.last().unwrap().contains(key)
-    }
-    pub fn positional_argument_size(&self) -> usize {
-        self.args.len()
-    }
-    pub fn parametric_argument_size(&self) -> usize {
-        self.args.last().unwrap().parameters.len()
-    }
-    pub fn parametric_iter(&self) -> impl Iterator<Item = &(ArgKey, String)> {
-        self.args.last().unwrap().parameters.iter()
-    }
-    pub fn arg_iter(&self) -> impl Iterator<Item = &PositionalParsedArgs> {
-        self.args.iter()
-    }
-    pub fn len(&self) -> usize {
-        self.args.len()
-    }
-    pub fn is_empty(&self) -> bool {
-        self.args.is_empty()
-    }
-
-    // For use with parsing
-    pub fn add_positional(&mut self, value: impl Into<String>) -> &mut Self {
-        self.args.push(PositionalParsedArgs::new(value));
-        self
-    }
-    pub fn add_argument(&mut self, key: impl Into<ArgKey>, value: impl Into<String>) -> &mut Self {
-        self.args.last_mut().unwrap().add_argument(key, value);
-        self
-    }
-
-    // Iterator
-    pub fn current_arg(&mut self) -> Option<&String> {
-        self.it.arg()
-    }
-    pub fn next_arg(&mut self) -> Option<&String> {
-        self.it.next_arg();
-        self.it.arg()
     }
 }
