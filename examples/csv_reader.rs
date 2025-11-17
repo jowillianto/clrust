@@ -28,10 +28,7 @@ fn main() -> Result<(), Box<dyn Error>> {
             .validate(ArgEmptyValidator::allow())
             .optional(),
     );
-
-    if let Err(err) = app.parse_args(true, true) {
-        return Err(Box::new(err));
-    }
+    app.parse_args(true);
 
     let parsed = app.args();
     let csv_path = parsed

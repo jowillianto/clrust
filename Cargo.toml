@@ -8,6 +8,7 @@ crate-type = ["lib"]
 proc-macro = true
 
 [dependencies]
+ctrlc = "3.5.1"
 
 [dev-dependencies]
 
@@ -15,9 +16,6 @@ proc-macro = true
 [[example]]
 name = "hello_world"
 path = "examples/hello_world.rs"
-[[example]]
-name = "main"
-path = "examples/main.rs"
 
 [[example]]
 name = "main"

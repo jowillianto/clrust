@@ -1,6 +1,6 @@
-use std::iter::Peekable;
+use std::{fmt::Debug, iter::Peekable};
 
-use crate::{Arg, ArgEmptyValidator, ArgKey, ArgValidator, ParseError, ParseErrorKind, ParsedArg};
+use crate::{Arg, ArgKey, ArgValidator, ParseError, ParseErrorKind, ParsedArg};
 
 pub struct ParamTier {
     pub pos: Arg,
@@ -21,8 +21,38 @@ impl ParamTier {
     pub fn is_empty(&self) -> bool {
         self.params.is_empty()
     }
-    pub fn iter(&self) -> impl Iterator<Item = &(ArgKey, Arg)> {
+    pub fn params_iter(&self) -> impl Iterator<Item = &(ArgKey, Arg)> {
         self.params.iter()
+    }
+
+    fn parse_params(
+        &self,
+        key: &ArgKey,
+        value: Option<&str>,
+        args: &mut ParsedArg,
+        raw_args: &mut Peekable<std::env::Args>,
+    ) -> Result<bool, ParseError> {
+        for (arg_key, arg) in self.params_iter() {
+            if arg_key == key {
+                let parse_res = match ArgValidator::validate(arg, value) {
+                    Ok(_) => Ok(value.map(String::from)),
+                    Err(e) => match e.kind {
+                        ParseErrorKind::NoValueGiven => {
+                            raw_args.next();
+                            match ArgValidator::validate(arg, raw_args.peek().map(|v| v as &str)) {
+                                Ok(_) => Ok(raw_args.peek().cloned()),
+                                Err(e) => Err(e),
+                            }
+                        }
+                        _ => Err(e),
+                    },
+                }?;
+                args.add_argument(key.clone(), parse_res.unwrap_or_default());
+                raw_args.next();
+                return Ok(true);
+            }
+        }
+        Ok(false)
     }
 
     pub fn parse(
@@ -37,56 +67,23 @@ impl ParamTier {
                 return Err(ParseError::invalid_value("expected args instead of kwargs")
                     .key(format!("arg{}", pos_id)));
             }
-            if let Err(e) = ArgValidator::validate(&self.pos, Some(current_arg)) {
-                return Err(e.key(format!("arg{}", pos_id)));
-            }
+            ArgValidator::validate(&self.pos, Some(current_arg))
+                .map_err(|e| e.key(format!("arg{}", pos_id)))?;
             args.add_positional_argument(current_arg.clone());
-            if let Err(e) = ArgValidator::post_validate(&self.pos, None, args) {
-                return Err(e.key(format!("arg{}", pos_id)));
-            }
+            ArgValidator::post_validate(&self.pos, None, args)
+                .map_err(|e| e.key(format!("arg{}", pos_id)))?;
             raw_args.next();
         }
         let mut is_parser_run = true;
         while is_parser_run && let Some(current_arg) = raw_args.peek().cloned() {
             is_parser_run = false;
             if let Ok((parsed_key, parsed_value)) = ArgKey::parse_arg(&current_arg) {
-                for (arg_key, arg) in self.params.iter() {
-                    if arg_key == &parsed_key {
-                        is_parser_run = true;
-                        if let Err(e) = ArgValidator::validate(arg, parsed_value) {
-                            if e.kind == ParseErrorKind::NoValueGiven {
-                                let next_arg = raw_args.next();
-                                if let Err(e) = ArgValidator::validate(
-                                    arg,
-                                    next_arg.as_ref().map(|v| v as &str),
-                                ) {
-                                    return Err(e.key(arg_key.clone()));
-                                } else {
-                                    args.add_argument(
-                                        arg_key.clone(),
-                                        next_arg.unwrap_or_default(),
-                                    );
-                                }
-                            } else {
-                                return Err(e.key(arg_key.clone()));
-                            }
-                        } else {
-                            args.add_argument(
-                                arg_key.clone(),
-                                parsed_value.map(String::from).unwrap_or_default(),
-                            );
-                        }
-                    }
-                }
-                if !is_parser_run {
-                    break;
-                }
+                is_parser_run = self.parse_params(&parsed_key, parsed_value, args, raw_args)?;
             }
         }
         for (arg_key, arg) in self.params.iter() {
-            if let Err(e) = ArgValidator::post_validate(arg, Some(arg_key), args) {
-                return Err(e.key(arg_key.clone()));
-            }
+            ArgValidator::post_validate(arg, Some(arg_key), args)
+                .map_err(|e| e.key(arg_key.clone()))?;
         }
         Ok(())
     }
@@ -99,7 +96,7 @@ pub struct ArgParser {
 impl Default for ArgParser {
     fn default() -> Self {
         let mut parser = Self { args: Vec::new() };
-        parser.add_positional_argument(Arg::new().validate(ArgEmptyValidator::require_value()));
+        parser.add_positional_argument(Arg::new().require_value());
         parser
     }
 }
@@ -146,8 +143,12 @@ impl ArgParser {
         args: &mut ParsedArg,
         raw_args: &mut Peekable<std::env::Args>,
     ) -> Result<(), ParseError> {
-        for i in std::cmp::max(0, args.len() - 1)..self.len() {
-            self.args[i].parse(i, args, raw_args, self.len() <= i)?
+        let arg_beg_id = match args.len() {
+            0 => 0,
+            v => v - 1,
+        };
+        for i in arg_beg_id..self.len() {
+            self.args[i].parse(i, args, raw_args, args.len() <= i)?
         }
         Ok(())
     }
@@ -159,5 +160,17 @@ impl ArgParser {
 
     pub fn iter(&self) -> impl Iterator<Item = &ParamTier> {
         self.args.iter()
+    }
+}
+
+impl Debug for ArgParser {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        for (id, tier) in self.iter().enumerate() {
+            writeln!(f, "arg{}", id)?;
+            for (k, _) in tier.params_iter() {
+                writeln!(f, "{}", k)?;
+            }
+        }
+        Ok(())
     }
 }

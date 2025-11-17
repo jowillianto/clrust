@@ -6,23 +6,14 @@ struct ParamTier {
     params: Vec<(ArgKey, String)>,
 }
 
-#[derive(Debug)]
+#[derive(Debug, Default)]
 pub struct ParsedArg {
     values: Vec<ParamTier>,
 }
-
-impl Default for ParsedArg {
-    fn default() -> Self {
-        Self::new()
-    }
-}
-
 impl ParsedArg {
     // Modification Functions
     pub fn new() -> Self {
-        let mut parsed = Self { values: Vec::new() };
-        parsed.add_positional_argument(std::env::args().next().unwrap());
-        parsed
+        Self::default()
     }
     pub fn add_positional_argument(&mut self, v: impl Into<String>) -> &mut Self {
         self.values.push(ParamTier {
@@ -62,8 +53,10 @@ impl ParsedArg {
     pub fn filter<'a>(
         &'a self,
         key: &(impl PartialEq<ArgKey> + ?Sized),
-    ) -> impl Iterator<Item = &'a (ArgKey, String)> {
-        self.param_iter().filter(move |&arg| key == &arg.0)
+    ) -> impl Iterator<Item = &'a String> {
+        self.param_iter()
+            .filter(move |&arg| key == &arg.0)
+            .map(move |arg| &arg.1)
     }
     pub fn count(&self, key: &(impl PartialEq<ArgKey> + ?Sized)) -> usize {
         self.filter(key).count()

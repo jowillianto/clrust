@@ -1,4 +1,4 @@
-use clrust::{App, AppIdentity, AppVersion, Arg, ArgEmptyValidator};
+use clrust::{App, AppIdentity, AppVersion, Arg};
 
 fn main() {
     let mut app = App::new(
@@ -14,13 +14,11 @@ fn main() {
         "--echo",
         Arg::new()
             .help("Value to echo back to stdout")
-            .validate(ArgEmptyValidator::require_value())
+            .require_value()
             .required(),
     );
 
-    if app.parse_args(true, true).is_err() {
-        return;
-    }
+    app.parse_args(true);
 
     let value = app
         .args()

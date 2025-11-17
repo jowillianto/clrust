@@ -31,7 +31,7 @@ impl ArgKey {
             None => Ok((ArgKey::make_unchecked(k), None)),
             Some(eq_pos) => {
                 let (pre_eq, post_eq) = k.split_at(eq_pos);
-                Ok((ArgKey::make_unchecked(pre_eq), Some(post_eq)))
+                Ok((ArgKey::make_unchecked(pre_eq), Some(&post_eq[1..])))
             }
         }
     }

@@ -15,9 +15,7 @@ fn main() {
             .optional(),
     );
 
-    if app.parse_args(true, true).is_err() {
-        return;
-    }
+    app.parse_args(true);
 
     let greeting = app
         .args()

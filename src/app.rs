@@ -1,7 +1,7 @@
 use std::iter::Peekable;
 
 use crate::{
-    AppIdentity, Arg, ArgEmptyValidator, ArgParser, ArgValidator, ParseError, ParsedArg,
+    AppIdentity, Arg, ArgParser, ArgValidator, ParsedArg,
     tui::{self, DomRenderer, DomStyle, RgbColor},
 };
 
@@ -42,16 +42,21 @@ impl App {
 
     pub fn add_positional_argument(&mut self, arg: Arg) {
         self.parser.add_positional_argument(arg);
+        self.add_help_arguments();
     }
     fn add_help_arguments(&mut self) {
-        let help_arg = Arg::new()
-            .help("Show the help message for the application")
-            .validate(ArgEmptyValidator::allow());
-        self.parser.add_argument("-h", help_arg);
-        let long_help_arg = Arg::new()
-            .help("Show the help message for the application")
-            .validate(ArgEmptyValidator::allow());
-        self.parser.add_argument("--help", long_help_arg);
+        self.parser.add_argument(
+            "-h",
+            Arg::new()
+                .help("Show the help message for the application")
+                .as_flag(),
+        );
+        self.parser.add_argument(
+            "--help",
+            Arg::new()
+                .help("Show the help message for the application")
+                .as_flag(),
+        );
     }
 
     pub fn arg_len(&self) -> usize {
@@ -59,7 +64,8 @@ impl App {
     }
 
     pub fn print_help_text(&mut self) {
-        let mut layout = tui::Layout::new();
+        let style = DomStyle::new().fg(RgbColor::bright_green());
+        let mut layout = tui::Layout::new().style(style.clone());
         layout = layout.append_child(tui::Paragraph(format!(
             "{} v{}",
             self.identity.name, self.identity.version
@@ -78,7 +84,7 @@ impl App {
         layout = layout.append_child(tui::Paragraph(String::new()));
 
         for (idx, tier) in self.parser.iter().enumerate() {
-            let mut section = tui::Layout::new();
+            let mut section = tui::Layout::new().style(style.clone());
             section = section.append_child(tui::Paragraph(format!("arg{idx}:")));
 
             if tier.is_empty() {
@@ -87,8 +93,8 @@ impl App {
             } else {
                 section =
                     section.append_child(tui::Paragraph(String::from("  Keyword Arguments:")));
-                for (key, arg) in tier.iter() {
-                    let mut entry = tui::Layout::new().style(DomStyle::default().indent(4));
+                for (key, arg) in tier.params_iter() {
+                    let mut entry = tui::Layout::new().style(style.clone().indent(2));
                     entry = entry.append_child(tui::Paragraph(format!("{}", key)));
                     if let Some(node) = ArgValidator::help(arg) {
                         entry = entry.append_child(node);
@@ -104,11 +110,31 @@ impl App {
         let _ = self.out.render(&tui::VStack(layout));
     }
 
-    pub fn parse_args(
-        &mut self,
-        auto_help: bool,
-        auto_exit: bool,
-    ) -> Result<&ParsedArg, ParseError> {
+    pub fn render_err(&mut self, dom: &tui::DomNode, exit_code: i32) {
+        let _ = self.err.render(dom);
+        std::process::exit(exit_code);
+    }
+
+    pub fn render_err_string(&mut self, msg: impl Into<String>, exit_code: i32) {
+        self.render_err(
+            &tui::VStack(
+                tui::Layout::new()
+                    .style(tui::DomStyle::new().fg(tui::RgbColor::bright_yellow()))
+                    .append_child(tui::Paragraph(msg.into())),
+            ),
+            exit_code,
+        )
+    }
+
+    pub fn render_out(&mut self, dom: &tui::DomNode) {
+        let _ = self.out.render(dom);
+    }
+
+    pub fn render_out_string(&mut self, msg: impl Into<String>) {
+        self.render_out(&tui::Paragraph(msg.into()))
+    }
+
+    pub fn parse_args(&mut self, auto_help: bool) -> &ParsedArg {
         match self
             .parser
             .incremental_parse(&mut self.parsed, &mut self.raw_args)
@@ -116,22 +142,17 @@ impl App {
             Ok(_) => {
                 if auto_help && (self.parsed.count("-h") + self.parsed.count("--help") > 0) {
                     self.print_help_text();
-                    if auto_exit {
-                        std::process::exit(0);
-                    }
+                    std::process::exit(0);
                 }
-                Ok(&self.parsed)
+                &self.parsed
             }
             Err(err) => {
-                if auto_exit {
-                    let _ = self.err.render(&tui::VStack(
-                        tui::Layout::default()
-                            .append_child(tui::Paragraph(err.msg))
-                            .style(DomStyle::new().fg(RgbColor::bright_yellow())),
-                    ));
-                    std::process::exit(1);
-                }
-                Err(err)
+                let _ = self.err.render(&tui::VStack(
+                    tui::Layout::default()
+                        .append_child(tui::Paragraph(err.msg))
+                        .style(DomStyle::new().fg(RgbColor::bright_yellow())),
+                ));
+                std::process::exit(1);
             }
         }
     }
