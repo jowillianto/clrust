@@ -125,10 +125,7 @@ impl DomStyle {
         self
     }
 
-    pub fn effects<I>(mut self, effects: I) -> Self
-    where
-        I: IntoIterator<Item = TextEffect>,
-    {
+    pub fn effects<I: IntoIterator<Item = TextEffect>>(mut self, effects: I) -> Self {
         for effect in effects {
             self.effects.get_or_insert_with(HashSet::new).insert(effect);
         }
@@ -151,7 +148,7 @@ impl DomStyle {
     }
 }
 
-#[derive(Default, Clone)]
+#[derive(Debug, Default, Clone)]
 pub struct Layout {
     children: Vec<DomNode>,
     style: DomStyle,
@@ -172,11 +169,10 @@ impl Layout {
         self
     }
 
-    pub fn append_children<I, N>(mut self, children: I) -> Self
-    where
-        I: IntoIterator<Item = N>,
-        N: Into<DomNode>,
-    {
+    pub fn append_children<N: Into<DomNode>, I: IntoIterator<Item = N>>(
+        mut self,
+        children: I,
+    ) -> Self {
         for child in children {
             self.children.push(child.into());
         }
@@ -196,15 +192,45 @@ impl Layout {
     }
 }
 
-#[derive(Clone)]
+#[derive(Debug, Clone)]
+pub struct Text {
+    text: String,
+    newline: bool,
+}
+
+impl Text {
+    pub fn new(v: String) -> Self {
+        Self {
+            text: v,
+            newline: true,
+        }
+    }
+    pub fn no_newline(mut self) -> Self {
+        self.newline = false;
+        self
+    }
+}
+
+impl<T: Into<String>> From<T> for Text {
+    fn from(value: T) -> Self {
+        Self::new(value.into())
+    }
+}
+
+#[derive(Debug, Clone)]
 pub enum DomNode {
     VStack(Layout),
-    Paragraph(String),
+    Paragraph(Text),
 }
 pub use DomNode::Paragraph;
 pub use DomNode::VStack;
 
-impl<T: Into<String>> From<T> for DomNode {
+#[macro_export]
+macro_rules! paragraph {
+    ($($args:expr), *) => { tui::Paragraph(tui::Text::new(format!($($args, )*)))};
+}
+
+impl<T: Into<Text>> From<T> for DomNode {
     fn from(value: T) -> Self {
         Self::Paragraph(value.into())
     }
@@ -286,8 +312,12 @@ impl<T: io::Write> AnsiTerminal<T> {
         }
     }
 
-    fn render_paragraph(&mut self, p: &String, indent: u32) -> Result<(), std::io::Error> {
-        writeln!(self.out, "{}{}", " ".repeat(indent as usize), p)
+    fn render_paragraph(&mut self, p: &Text, indent: u32) -> Result<(), std::io::Error> {
+        if p.newline {
+            writeln!(self.out, "{}{}", " ".repeat(indent as usize), &p.text)
+        } else {
+            write!(self.out, "{}{}", " ".repeat(indent as usize), &p.text)
+        }
     }
 
     fn reset_format(&mut self) -> Result<(), std::io::Error> {

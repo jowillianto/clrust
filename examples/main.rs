@@ -1,22 +1,19 @@
 use std::{
     env,
     ffi::OsStr,
-    path::{Path, PathBuf},
+    path::PathBuf,
     process::{Command, Stdio},
     sync::{
-        atomic::{AtomicBool, AtomicI32, Ordering},
         Arc,
+        atomic::{AtomicBool, Ordering},
     },
     thread,
     time::Duration,
 };
 
-use clrust::{
-    App, AppIdentity, AppVersion, Arg, ArgEmptyValidator, ArgParser, ParseError, ParsedArg,
-    BuildAction,
-};
+use clrust::{ActionBuilder, ActionHandler, App, AppIdentity, AppVersion, Arg, ArgEmptyValidator};
 
-#[derive(Clone)]
+#[derive(Debug, Clone)]
 struct AppState {
     app_dir: PathBuf,
     data_dir: Option<PathBuf>,
@@ -52,10 +49,6 @@ impl AppState {
         self.data_dir
             .clone()
             .unwrap_or_else(|| PathBuf::from("/data"))
-    }
-
-    fn backend_path(&self) -> PathBuf {
-        self.app_dir.join("backend")
     }
 
     fn resolved_llama_path(&self) -> PathBuf {
@@ -113,10 +106,7 @@ impl Drop for ProcessManager {
 fn run_stack(state: &AppState, heavy: bool) -> Result<ProcessManager, String> {
     let mut procs = ProcessManager::new();
 
-    let data_mount = format!(
-        "{}:/data",
-        state.resolved_data_path().to_string_lossy()
-    );
+    let data_mount = format!("{}:/data", state.resolved_data_path().to_string_lossy());
 
     let backend = spawn_process([
         "docker",
@@ -144,20 +134,20 @@ fn run_stack(state: &AppState, heavy: bool) -> Result<ProcessManager, String> {
 
     if heavy {
         let llama_cmd = spawn_process([
-            state.resolved_llama_path().to_string_lossy().to_string(),
+            state.resolved_llama_path().into_os_string(),
             "--host".into(),
             "0.0.0.0".into(),
             "--port".into(),
-            state.llama_port.to_string(),
+            state.llama_port.to_string().into(),
             "-m".into(),
-            state.resolved_model_path().to_string_lossy().to_string(),
+            state.resolved_model_path().into_os_string(),
             "--no-webui".into(),
             "--context-shift".into(),
             "--ctx_size".into(),
-            state.llama_context_size.to_string(),
+            state.llama_context_size.to_string().into(),
             "--jinja".into(),
             "-ngl".into(),
-            state.llama_gpu_layers.to_string(),
+            state.llama_gpu_layers.to_string().into(),
         ])
         .map_err(|e| format!("failed to start llama server: {e}"))?;
         procs.push(llama_cmd);
@@ -184,32 +174,27 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             .optional(),
     );
 
-    if app.parse_args(false, true).is_err() {
-        return Ok(());
-    }
-
-    let mut state = AppState::new(env::current_exe()?.parent().unwrap().to_path_buf());
+    app.parse_args(false);
+    let app_dir = env::current_exe()?.parent().unwrap().to_path_buf();
+    let mut state = AppState::new(app_dir);
     state.data_dir = app.args().first_of("--data").cloned().map(PathBuf::from);
+    attach_sigint_handler(state.interrupted.clone())?;
 
-    let interrupted = state.interrupted.clone();
-    ctrlc::set_handler(move || {
-        interrupted.store(true, Ordering::SeqCst);
-    })?;
-
-    BuildAction::new(&mut app, Some("Choose how to run the stack".into()))
-        .add_action("heavy", "Run with local llama server", move |app| {
-            configure_llama(app, &mut state);
-            if let Ok(mut procs) = run_stack(&state, true) {
-                wait_for_interrupt(&state);
-                procs.terminate();
-            }
-        })
-        .add_action("lite", "Use hosted APIs only", move |_app| {
-            if let Ok(mut procs) = run_stack(&state, false) {
-                wait_for_interrupt(&state);
-                procs.terminate();
-            }
-        })
+    ActionBuilder::new(&mut app, Some(String::from("Choose how to run the stack")))
+        .add_action(
+            "heavy",
+            "Run with local llama server",
+            HeavyAction {
+                state: state.clone(),
+            },
+        )
+        .add_action(
+            "lite",
+            "Use hosted APIs only",
+            LiteAction {
+                state: state.clone(),
+            },
+        )
         .run();
 
     Ok(())
@@ -220,44 +205,40 @@ fn configure_llama(app: &mut App, state: &mut AppState) {
         "--llama",
         Arg::new()
             .help("Path to llama executable (default: bundled).")
-            .validate(ArgEmptyValidator::require_value())
+            .require_value()
             .optional(),
     );
     app.add_argument(
         "--model",
         Arg::new()
             .help("Path to GGUF model (default: bundled).")
-            .validate(ArgEmptyValidator::require_value())
+            .require_value()
             .optional(),
     );
     app.add_argument(
         "--port",
         Arg::new()
             .help("Port for llama server (default: 8080).")
-            .validate(ArgEmptyValidator::require_value())
+            .require_value()
             .optional(),
     );
     app.add_argument(
         "--offload_layers",
         Arg::new()
             .help("Layers to offload to GPU (default: all).")
-            .validate(ArgEmptyValidator::require_value())
+            .require_value()
             .optional(),
     );
     app.add_argument(
         "--context_size",
         Arg::new()
             .help("Context size for the model (default: max).")
-            .validate(ArgEmptyValidator::require_value())
+            .require_value()
             .optional(),
     );
-
-    if app.parse_args(false, true).is_err() {
-        return;
-    }
-
-    state.llama_exe = app.args().first_of("--llama").cloned().map(PathBuf::from);
-    state.llama_model_path = app.args().first_of("--model").cloned().map(PathBuf::from);
+    app.parse_args(true);
+    state.llama_exe = app.args().first_of("--llama").map(PathBuf::from);
+    state.llama_model_path = app.args().first_of("--model").map(PathBuf::from);
     state.llama_port = app
         .args()
         .first_of("--port")
@@ -278,5 +259,43 @@ fn configure_llama(app: &mut App, state: &mut AppState) {
 fn wait_for_interrupt(state: &AppState) {
     while !state.interrupted.load(Ordering::SeqCst) {
         thread::sleep(Duration::from_millis(200));
+    }
+}
+
+fn attach_sigint_handler(flag: Arc<AtomicBool>) -> Result<(), Box<dyn std::error::Error>> {
+    let handler_flag = flag.clone();
+    ctrlc::set_handler(move || {
+        handler_flag.store(true, Ordering::SeqCst);
+    })?;
+    Ok(())
+}
+
+struct HeavyAction {
+    state: AppState,
+}
+
+impl ActionHandler for HeavyAction {
+    fn run(&mut self, app: &mut App) {
+        configure_llama(app, &mut self.state);
+        match run_stack(&self.state, true) {
+            Ok(mut procs) => {
+                wait_for_interrupt(&self.state);
+                procs.terminate();
+            }
+            Err(e) => app.render_err_string(e, 1),
+        }
+    }
+}
+
+struct LiteAction {
+    state: AppState,
+}
+
+impl ActionHandler for LiteAction {
+    fn run(&mut self, _app: &mut App) {
+        if let Ok(mut procs) = run_stack(&self.state, false) {
+            wait_for_interrupt(&self.state);
+            procs.terminate();
+        }
     }
 }

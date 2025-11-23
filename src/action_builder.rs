@@ -1,5 +1,5 @@
-use crate::tui;
 use crate::{App, Arg, ArgOptionValidator};
+use crate::{paragraph, tui};
 
 pub trait ActionHandler {
     fn run(&mut self, app: &mut App);
@@ -76,10 +76,7 @@ impl<'a> ActionBuilder<'a> {
             app.render_err(
                 &tui::VStack(
                     tui::Layout::default()
-                        .append_child(tui::Paragraph(format!(
-                            "arg{}: expected action name",
-                            action_index
-                        )))
+                        .append_child(paragraph!("arg{}: expected action name", action_index))
                         .style(tui::DomStyle::new().fg(tui::RgbColor::bright_yellow())),
                 ),
                 1,
@@ -93,10 +90,7 @@ impl<'a> ActionBuilder<'a> {
                 app.render_err(
                     &tui::VStack(
                         tui::Layout::default()
-                            .append_child(tui::Paragraph(format!(
-                                "Unknown action '{}'",
-                                action_name
-                            )))
+                            .append_child(paragraph!("Unknown action '{}'", action_name))
                             .style(tui::DomStyle::new().fg(tui::RgbColor::bright_yellow())),
                     ),
                     1,

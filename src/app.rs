@@ -1,7 +1,8 @@
+use core::fmt;
 use std::iter::Peekable;
 
 use crate::{
-    AppIdentity, Arg, ArgParser, ArgValidator, ParsedArg,
+    AppIdentity, Arg, ArgParser, ArgValidator, ParsedArg, paragraph,
     tui::{self, DomRenderer, DomStyle, RgbColor},
 };
 
@@ -66,46 +67,45 @@ impl App {
     pub fn print_help_text(&mut self) {
         let style = DomStyle::new().fg(RgbColor::bright_green());
         let mut layout = tui::Layout::new().style(style.clone());
-        layout = layout.append_child(tui::Paragraph(format!(
+        layout = layout.append_child(paragraph!(
             "{} v{}",
-            self.identity.name, self.identity.version
-        )));
+            self.identity.name,
+            self.identity.version
+        ));
 
         if !self.identity.description.is_empty() {
-            layout = layout.append_child(tui::Paragraph(self.identity.description.clone()));
+            layout = layout.append_child(paragraph!("{}", &self.identity.description));
         }
         if let Some(author) = &self.identity.author {
-            layout = layout.append_child(tui::Paragraph(format!("Written by : {author}")));
+            layout = layout.append_child(paragraph!("Written by : {}", author));
         }
         if let Some(license) = &self.identity.license {
-            layout = layout.append_child(tui::Paragraph(license.to_owned()));
+            layout = layout.append_child(paragraph!("{}", license));
         }
 
-        layout = layout.append_child(tui::Paragraph(String::new()));
+        layout = layout.append_child(paragraph!(""));
 
         for (idx, tier) in self.parser.iter().enumerate() {
             let mut section = tui::Layout::new().style(style.clone());
-            section = section.append_child(tui::Paragraph(format!("arg{idx}:")));
+            section = section.append_child(paragraph!("arg{idx}:"));
 
             if tier.is_empty() {
-                section =
-                    section.append_child(tui::Paragraph("  <no keyword arguments defined>".into()));
+                section = section.append_child(paragraph!("  <no keyword arguments defined>"));
             } else {
-                section =
-                    section.append_child(tui::Paragraph(String::from("  Keyword Arguments:")));
+                section = section.append_child(paragraph!("  Keyword Arguments:"));
                 for (key, arg) in tier.params_iter() {
                     let mut entry = tui::Layout::new().style(style.clone().indent(2));
-                    entry = entry.append_child(tui::Paragraph(format!("{}", key)));
+                    entry = entry.append_child(paragraph!("{}", key));
                     if let Some(node) = ArgValidator::help(arg) {
                         entry = entry.append_child(node);
                     } else {
-                        entry = entry.append_child(tui::Paragraph(String::from("<no help>")));
+                        entry = entry.append_child(paragraph!("<no-help>"));
                     }
                     section = section.append_child(tui::VStack(entry));
                 }
             }
             layout = layout.append_child(tui::VStack(section));
-            layout = layout.append_child(tui::Paragraph(String::new()));
+            layout = layout.append_child(paragraph!(""));
         }
         let _ = self.out.render(&tui::VStack(layout));
     }
@@ -115,12 +115,12 @@ impl App {
         std::process::exit(exit_code);
     }
 
-    pub fn render_err_string(&mut self, msg: impl Into<String>, exit_code: i32) {
+    pub fn render_err_string(&mut self, msg: impl fmt::Display, exit_code: i32) {
         self.render_err(
             &tui::VStack(
                 tui::Layout::new()
                     .style(tui::DomStyle::new().fg(tui::RgbColor::bright_yellow()))
-                    .append_child(tui::Paragraph(msg.into())),
+                    .append_child(paragraph!("{}", msg)),
             ),
             exit_code,
         )
@@ -130,8 +130,8 @@ impl App {
         let _ = self.out.render(dom);
     }
 
-    pub fn render_out_string(&mut self, msg: impl Into<String>) {
-        self.render_out(&tui::Paragraph(msg.into()))
+    pub fn render_out_string(&mut self, msg: impl fmt::Display) {
+        self.render_out(&paragraph!("{}", msg));
     }
 
     pub fn parse_args(&mut self, auto_help: bool) -> &ParsedArg {
@@ -149,7 +149,7 @@ impl App {
             Err(err) => {
                 let _ = self.err.render(&tui::VStack(
                     tui::Layout::default()
-                        .append_child(tui::Paragraph(err.msg))
+                        .append_child(paragraph!("{}", err.msg))
                         .style(DomStyle::new().fg(RgbColor::bright_yellow())),
                 ));
                 std::process::exit(1);

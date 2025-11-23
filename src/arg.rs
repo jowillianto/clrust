@@ -1,4 +1,4 @@
-use crate::{ArgKey, ParseError, ParsedArg, tui};
+use crate::{ArgKey, ParseError, ParsedArg, paragraph, tui};
 
 pub trait ArgValidator {
     fn id(&self) -> Option<String> {
@@ -59,9 +59,9 @@ impl ArgValidator for ArgOptionValidator {
         let mut layout = tui::Layout::default();
         for (v, h) in self.iter() {
             if let Some(h) = h {
-                layout = layout.append_child(tui::Paragraph(format!("- {}: {}", v, h)));
+                layout = layout.append_child(paragraph!("- {}: {}", v, h));
             } else {
-                layout = layout.append_child(tui::Paragraph(format!("- {}: <no-help>", v)));
+                layout = layout.append_child(paragraph!("- {}: <no-help>", v));
             }
         }
         Some(tui::VStack(layout))
@@ -114,19 +114,21 @@ impl ArgValidator for ArgCountValidator {
     }
 
     fn help(&self) -> Option<tui::DomNode> {
-        let desc = if self.min_size == self.max_size && self.min_size != 1 {
-            format!("Arg Count: ={}", self.min_size)
+        if self.min_size == self.max_size && self.min_size != 1 {
+            Some(paragraph!("Arg Count: ={}", self.min_size))
         } else if self.min_size == 0 && self.max_size == 1 {
-            "Optional".into()
+            Some(paragraph!("Optional"))
         } else if self.min_size == 1 && self.max_size == 1 {
-            "Required".into()
+            Some(paragraph!("Required"))
         } else if self.min_size == 1 && self.max_size == u64::MAX {
-            format!("Arg Count: >= {}", self.min_size)
+            Some(paragraph!("Arg Count: >= {}", self.max_size))
         } else {
-            format!("Arg Count: {} <= n <= {}", self.min_size, self.max_size)
-        };
-
-        Some(tui::Paragraph(desc))
+            Some(paragraph!(
+                "Arg Count: {} <= n <= {}",
+                self.min_size,
+                self.max_size
+            ))
+        }
     }
 
     fn post_validate(&self, key: Option<&ArgKey>, args: &ParsedArg) -> Result<(), ParseError> {
@@ -168,7 +170,7 @@ impl ArgValidator for ArgEmptyValidator {
 
     fn help(&self) -> Option<tui::DomNode> {
         if self.allow_empty {
-            Some(tui::Paragraph(String::from("Flag")))
+            Some(paragraph!("Flag"))
         } else {
             None
         }
@@ -213,9 +215,7 @@ impl ArgValidator for Arg {
     }
 
     fn help(&self) -> Option<tui::DomNode> {
-        self.help_text
-            .as_ref()
-            .map(|text| tui::Paragraph(text.clone()))
+        self.help_text.as_ref().map(|text| paragraph!("{}", text))
     }
 }
 
