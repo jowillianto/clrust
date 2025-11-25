@@ -1,14 +1,11 @@
 [package]
 name = "clark"
-version = "0.1.0"
+version = "1.0.0"
 edition = "2024"
 
 [lib]
 crate-type = ["lib"]
 proc-macro = true
-
-[dependencies]
-ctrlc = "3.5.1"
 
 [dev-dependencies]
 
@@ -18,5 +15,9 @@ name = "hello_world"
 path = "examples/hello_world.rs"
 
 [[example]]
-name = "main"
-path = "examples/main.rs"
+name = "csv_reader"
+path = "examples/csv_reader.rs"
+
+[[example]]
+name = "echo"
+path = "examples/echo.rs"

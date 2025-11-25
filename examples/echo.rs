@@ -1,4 +1,4 @@
-use clrust::{App, AppIdentity, AppVersion, Arg};
+use clark::{App, AppIdentity, AppVersion, Arg};
 
 fn main() {
     let mut app = App::new(
@@ -13,6 +13,7 @@ fn main() {
     app.add_argument(
         "--echo",
         Arg::new()
+            .with_default("You did not provide a value")
             .help("Value to echo back to stdout")
             .require_value()
             .required(),

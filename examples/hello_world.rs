@@ -1,4 +1,4 @@
-use clrust::{App, AppIdentity, AppVersion, Arg, ArgEmptyValidator};
+use clark::{App, AppIdentity, AppVersion, Arg, ArgEmptyValidator};
 
 fn main() {
     let identity = AppIdentity::new(

@@ -7,7 +7,7 @@ pub trait ArgValidator {
     fn validate(&self, _v: Option<&str>) -> Result<(), ParseError> {
         Ok(())
     }
-    fn post_validate(&self, _k: Option<&ArgKey>, _args: &ParsedArg) -> Result<(), ParseError> {
+    fn post_validate(&self, _k: Option<&ArgKey>, _args: &mut ParsedArg) -> Result<(), ParseError> {
         Ok(())
     }
     fn help(&self) -> Option<tui::DomNode> {
@@ -131,7 +131,7 @@ impl ArgValidator for ArgCountValidator {
         }
     }
 
-    fn post_validate(&self, key: Option<&ArgKey>, args: &ParsedArg) -> Result<(), ParseError> {
+    fn post_validate(&self, key: Option<&ArgKey>, args: &mut ParsedArg) -> Result<(), ParseError> {
         let count = key.map(|k| args.count(k) as u64).unwrap_or(1);
         if count < self.min_size || count > self.max_size {
             Err(ParseError::too_many_value_given(format!(
@@ -184,7 +184,43 @@ impl ArgValidator for ArgEmptyValidator {
         }
     }
 
-    fn post_validate(&self, _k: Option<&ArgKey>, _args: &ParsedArg) -> Result<(), ParseError> {
+    fn post_validate(&self, _k: Option<&ArgKey>, _args: &mut ParsedArg) -> Result<(), ParseError> {
+        Ok(())
+    }
+}
+
+#[derive(Debug)]
+pub struct DefaultArg {
+    value: String,
+}
+
+impl DefaultArg {
+    pub fn new(value: impl Into<String>) -> Self {
+        Self {
+            value: value.into(),
+        }
+    }
+}
+
+impl<T: Into<String>> From<T> for DefaultArg {
+    fn from(value: T) -> Self {
+        Self::new(value)
+    }
+}
+
+impl ArgValidator for DefaultArg {
+    fn help(&self) -> Option<tui::DomNode> {
+        Some(paragraph!("Default: {}", self.value))
+    }
+    fn id(&self) -> Option<String> {
+        Some(String::from("DefaultArg"))
+    }
+    fn post_validate(&self, _k: Option<&ArgKey>, _args: &mut ParsedArg) -> Result<(), ParseError> {
+        if let Some(k) = _k
+            && _args.count(k) == 0
+        {
+            _args.add_argument(k.clone(), self.value.clone());
+        }
         Ok(())
     }
 }
@@ -207,7 +243,7 @@ impl ArgValidator for Arg {
         Ok(())
     }
 
-    fn post_validate(&self, key: Option<&ArgKey>, args: &ParsedArg) -> Result<(), ParseError> {
+    fn post_validate(&self, key: Option<&ArgKey>, args: &mut ParsedArg) -> Result<(), ParseError> {
         for validator in &self.validators {
             validator.post_validate(key, args)?;
         }
@@ -232,6 +268,10 @@ impl Arg {
     pub fn validate(mut self, validator: impl ArgValidator + 'static) -> Self {
         self.validators.push(Box::new(validator));
         self
+    }
+
+    pub fn with_default(self, value: impl Into<String>) -> Self {
+        self.validate(DefaultArg::new(value))
     }
 
     pub fn n_at_least(self, min_size: u64) -> Self {
