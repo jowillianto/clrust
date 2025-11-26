@@ -1,3 +1,5 @@
+use chrono::{Datelike, Timelike};
+
 use crate::tui::{DomStyle, Layout, Paragraph, RgbColor};
 use std::{
     error::Error,
@@ -117,7 +119,7 @@ impl Ord for LogLevel {
 pub struct LogContext<'a> {
     pub status: LogLevel,
     pub location: &'static std::panic::Location<'static>,
-    pub time: chrono::DateTime<chrono::Local>,
+    pub time: chrono::DateTime<chrono::Utc>,
     pub message: fmt::Arguments<'a>,
 }
 
@@ -212,11 +214,11 @@ pub struct ColorfulFormatter;
 impl ColorfulFormatter {
     fn level_color(&self, level: u8) -> RgbColor {
         match level {
-            0..=9 => RgbColor::cyan(),
-            10..=19 => RgbColor::blue(),
-            20..=29 => RgbColor::green(),
-            30..=39 => RgbColor::yellow(),
-            40..=49 => RgbColor::magenta(),
+            0..10 => RgbColor::cyan(),
+            10..20 => RgbColor::blue(),
+            20..30 => RgbColor::green(),
+            30..40 => RgbColor::yellow(),
+            40..50 => RgbColor::magenta(),
             _ => RgbColor::red(),
         }
     }
@@ -227,11 +229,16 @@ impl LogFormatter for ColorfulFormatter {
         let mut buf = String::new();
         writeln!(
             buf,
-            "{} {} {}",
+            "{} {}-{:0>2}-{:0>2}T{:0>2}:{:0>2}:{:0>2}Z {}",
             Layout::new()
                 .style(DomStyle::new().fg(self.level_color(ctx.status.level)))
                 .append_child(Paragraph::new(format_args!("[{}]", ctx.status.name)).no_newline()),
-            ctx.time,
+            ctx.time.year(),
+            ctx.time.month(),
+            ctx.time.day(),
+            ctx.time.hour(),
+            ctx.time.minute(),
+            ctx.time.second(),
             ctx.message
         )
         .map_err(|_| LogError::format_error(format_args!("format error")))?;
@@ -245,8 +252,19 @@ pub struct BwFormatter;
 impl LogFormatter for BwFormatter {
     fn fmt<'a>(&'a self, ctx: &LogContext<'a>) -> Result<String, LogError> {
         let mut buf = String::new();
-        writeln!(buf, "[{}] {} {}", ctx.status.name, ctx.time, ctx.message)
-            .map_err(|_| LogError::format_error(format_args!("format error")))?;
+        writeln!(
+            buf,
+            "[{}] {}-{:0>2}-{:0>2}T{:0>2}:{:0>2}:{:0>2}Z {}",
+            ctx.status.name,
+            ctx.time.year(),
+            ctx.time.month(),
+            ctx.time.day(),
+            ctx.time.hour(),
+            ctx.time.minute(),
+            ctx.time.second(),
+            ctx.message
+        )
+        .map_err(|_| LogError::format_error(format_args!("format error")))?;
         Ok(buf)
     }
 }
@@ -257,9 +275,8 @@ pub struct PlainFormatter;
 impl LogFormatter for PlainFormatter {
     fn fmt(&self, ctx: &LogContext<'_>) -> Result<String, LogError> {
         let mut buf = String::new();
-        fmt::write(&mut buf, ctx.message)
+        writeln!(buf, "{}", ctx.message)
             .map_err(|_| LogError::format_error(format_args!("format error")))?;
-        buf.push('\n');
         Ok(buf)
     }
 }
@@ -345,7 +362,7 @@ pub fn log_with(logger: &Logger, status: LogLevel, message: fmt::Arguments<'_>) 
     logger.log(LogContext {
         status,
         location: std::panic::Location::caller(),
-        time: chrono::Local::now(),
+        time: chrono::Utc::now(),
         message,
     });
 }
