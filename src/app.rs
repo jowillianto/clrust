@@ -1,32 +1,22 @@
-use core::fmt;
 use std::iter::Peekable;
 
-use crate::{
-    AppIdentity, Arg, ArgParser, ArgValidator, ParsedArg, paragraph,
-    tui::{self, DomRenderer, DomStyle, RgbColor},
-};
+use crate::{AppIdentity, Arg, ArgParser, ArgValidator, ParsedArg, paragraph, tui};
 
 pub struct App {
     identity: AppIdentity,
     parser: ArgParser,
     parsed: ParsedArg,
     raw_args: Peekable<std::env::Args>,
-    out: tui::AnsiTerminal<std::io::Stdout>,
-    err: tui::AnsiTerminal<std::io::Stderr>,
 }
 
 impl App {
     pub fn new(identity: AppIdentity) -> Self {
-        let mut app = Self {
+        Self {
             identity,
             parser: ArgParser::new(),
             parsed: ParsedArg::new(),
             raw_args: std::env::args().peekable(),
-            out: tui::AnsiTerminal::default(),
-            err: tui::AnsiTerminal::default(),
-        };
-        app.add_help_arguments();
-        app
+        }
     }
 
     pub fn identity(&self) -> &AppIdentity {
@@ -45,7 +35,7 @@ impl App {
         self.parser.add_positional_argument(arg);
         self.add_help_arguments();
     }
-    fn add_help_arguments(&mut self) {
+    pub fn add_help_arguments(&mut self) {
         self.parser.add_argument(
             "-h",
             Arg::new()
@@ -65,7 +55,7 @@ impl App {
     }
 
     pub fn print_help_text(&mut self) {
-        let style = DomStyle::new().fg(RgbColor::bright_green());
+        let style = tui::DomStyle::new().fg(tui::RgbColor::bright_green());
         let mut layout = tui::Layout::new().style(style.clone());
         layout = layout.append_child(paragraph!(
             "{} v{}",
@@ -107,51 +97,28 @@ impl App {
             layout = layout.append_child(tui::VStack(section));
             layout = layout.append_child(paragraph!(""));
         }
-        let _ = self.out.render(&tui::VStack(layout));
-    }
-
-    pub fn render_err(&mut self, dom: &tui::DomNode, exit_code: i32) {
-        let _ = self.err.render(dom);
-        std::process::exit(exit_code);
-    }
-
-    pub fn render_err_string(&mut self, msg: impl fmt::Display, exit_code: i32) {
-        self.render_err(
-            &tui::VStack(
-                tui::Layout::new()
-                    .style(tui::DomStyle::new().fg(tui::RgbColor::bright_yellow()))
-                    .append_child(paragraph!("{}", msg)),
-            ),
-            exit_code,
-        )
-    }
-
-    pub fn render_out(&mut self, dom: &tui::DomNode) {
-        let _ = self.out.render(dom);
-    }
-
-    pub fn render_out_string(&mut self, msg: impl fmt::Display) {
-        self.render_out(&paragraph!("{}", msg));
+        println!("{}", &tui::VStack(layout));
     }
 
     pub fn parse_args(&mut self, auto_help: bool) -> &ParsedArg {
-        match self
+        let res = self
             .parser
-            .incremental_parse(&mut self.parsed, &mut self.raw_args)
-        {
-            Ok(_) => {
-                if auto_help && (self.parsed.count("-h") + self.parsed.count("--help") > 0) {
-                    self.print_help_text();
-                    std::process::exit(0);
-                }
-                &self.parsed
-            }
+            .incremental_parse(&mut self.parsed, &mut self.raw_args);
+        if auto_help && (self.parsed.count("-h") + self.parsed.count("--help") > 0) {
+            self.print_help_text();
+            std::process::exit(0);
+        }
+        match res {
+            Ok(_) => &self.parsed,
             Err(err) => {
-                let _ = self.err.render(&tui::VStack(
-                    tui::Layout::default()
-                        .append_child(paragraph!("{}", err.msg))
-                        .style(DomStyle::new().fg(RgbColor::bright_yellow())),
-                ));
+                eprintln!(
+                    "{}",
+                    tui::VStack(
+                        tui::Layout::default()
+                            .append_child(paragraph!("{}", err.msg))
+                            .style(tui::DomStyle::new().fg(tui::RgbColor::bright_yellow())),
+                    )
+                );
                 std::process::exit(1);
             }
         }

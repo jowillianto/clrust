@@ -64,8 +64,10 @@ impl ParamTier {
     ) -> Result<(), ParseError> {
         if parse_positional && let Some(current_arg) = raw_args.peek() {
             if ArgKey::is_arg_key(current_arg) {
-                return Err(ParseError::invalid_value("expected args instead of kwargs")
-                    .key(format!("arg{}", pos_id)));
+                return Err(ParseError::invalid_value(format_args!(
+                    "expected args instead of kwargs"
+                ))
+                .key(format!("arg{}", pos_id)));
             }
             ArgValidator::validate(&self.pos, Some(current_arg))
                 .map_err(|e| e.key(format!("arg{}", pos_id)))?;

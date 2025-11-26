@@ -49,15 +49,15 @@ impl TryFrom<&str> for AppVersion {
         let mut split_it = v.split('.');
         let major_s = split_it.next();
         if major_s.is_none() {
-            return Err(ParseError::invalid_value(v));
+            return Err(ParseError::invalid_value(format_args!("{v}")));
         }
         let minor_s = split_it.next();
         if minor_s.is_none() {
-            return Err(ParseError::invalid_value(v));
+            return Err(ParseError::invalid_value(format_args!("{v}")));
         }
         let patch_s = split_it.next();
         if patch_s.is_none() {
-            return Err(ParseError::invalid_value(v));
+            return Err(ParseError::invalid_value(format_args!("{v}")));
         }
         match major_s.unwrap().parse::<u32>() {
             Ok(major) => match minor_s.unwrap().parse::<u32>() {
@@ -67,11 +67,11 @@ impl TryFrom<&str> for AppVersion {
                         minor,
                         patch,
                     }),
-                    Err(_) => Err(ParseError::invalid_value(v)),
+                    Err(_) => Err(ParseError::invalid_value(format_args!("{v}"))),
                 },
-                Err(_) => Err(ParseError::invalid_value(v)),
+                Err(_) => Err(ParseError::invalid_value(format_args!("{v}"))),
             },
-            Err(_) => Err(ParseError::invalid_value(v)),
+            Err(_) => Err(ParseError::invalid_value(format_args!("{v}"))),
         }
     }
 }

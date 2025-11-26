@@ -1,5 +1,5 @@
-use std::collections::{HashMap, HashSet};
-use std::io;
+use std::collections::HashSet;
+use std::fmt::{self, Display};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub struct RgbColor {
@@ -193,15 +193,15 @@ impl Layout {
 }
 
 #[derive(Debug, Clone)]
-pub struct Text {
+pub struct Paragraph {
     text: String,
     newline: bool,
 }
 
-impl Text {
-    pub fn new(v: String) -> Self {
+impl Paragraph {
+    pub fn new<'a>(args: fmt::Arguments<'a>) -> Self {
         Self {
-            text: v,
+            text: fmt::format(args),
             newline: true,
         }
     }
@@ -211,100 +211,120 @@ impl Text {
     }
 }
 
-impl<T: Into<String>> From<T> for Text {
-    fn from(value: T) -> Self {
-        Self::new(value.into())
-    }
-}
-
 #[derive(Debug, Clone)]
 pub enum DomNode {
     VStack(Layout),
-    Paragraph(Text),
+    Text(Paragraph),
 }
-pub use DomNode::Paragraph;
+
 pub use DomNode::VStack;
+
+impl From<Paragraph> for DomNode {
+    fn from(value: Paragraph) -> Self {
+        Self::Text(value)
+    }
+}
+
+impl From<Layout> for DomNode {
+    fn from(value: Layout) -> Self {
+        Self::VStack(value)
+    }
+}
 
 #[macro_export]
 macro_rules! paragraph {
-    ($($args:expr), *) => { tui::Paragraph(tui::Text::new(format!($($args, )*)))};
+    ($($args: expr), *) => {
+        tui::DomNode::Text(tui::Paragraph::new(format_args!($($args), *)))
+    };
 }
+mod ansi {
+    use std::fmt;
 
-impl<T: Into<Text>> From<T> for DomNode {
-    fn from(value: T) -> Self {
-        Self::Paragraph(value.into())
-    }
-}
+    use crate::tui::{DomNode, DomStyle, Layout, Paragraph, RgbColor, TextEffect};
 
-pub trait DomRenderer {
-    fn render(&mut self, dom: &DomNode) -> Result<(), std::io::Error>;
-    fn clear(&mut self) -> Result<(), std::io::Error>;
-}
+    static ANSI_BG_MAP: [(RgbColor, u32); 16] = [
+        (RgbColor::black(), 40),
+        (RgbColor::red(), 41),
+        (RgbColor::green(), 42),
+        (RgbColor::yellow(), 43),
+        (RgbColor::blue(), 44),
+        (RgbColor::magenta(), 45),
+        (RgbColor::cyan(), 46),
+        (RgbColor::white(), 47),
+        (RgbColor::bright_black(), 100),
+        (RgbColor::bright_red(), 101),
+        (RgbColor::bright_green(), 102),
+        (RgbColor::bright_yellow(), 103),
+        (RgbColor::bright_blue(), 104),
+        (RgbColor::bright_magenta(), 105),
+        (RgbColor::bright_cyan(), 106),
+        (RgbColor::bright_white(), 107),
+    ];
 
-pub struct AnsiTerminal<T: io::Write> {
-    out: T,
-}
+    static ANSI_FG_MAP: [(RgbColor, u32); 16] = [
+        (RgbColor::black(), 30),
+        (RgbColor::red(), 31),
+        (RgbColor::green(), 32),
+        (RgbColor::yellow(), 33),
+        (RgbColor::blue(), 34),
+        (RgbColor::magenta(), 35),
+        (RgbColor::cyan(), 36),
+        (RgbColor::white(), 37),
+        (RgbColor::bright_black(), 90),
+        (RgbColor::bright_red(), 91),
+        (RgbColor::bright_green(), 92),
+        (RgbColor::bright_yellow(), 93),
+        (RgbColor::bright_blue(), 94),
+        (RgbColor::bright_magenta(), 95),
+        (RgbColor::bright_cyan(), 96),
+        (RgbColor::bright_white(), 97),
+    ];
 
-impl Default for AnsiTerminal<io::Stdout> {
-    fn default() -> Self {
-        Self { out: io::stdout() }
-    }
-}
-
-impl Default for AnsiTerminal<io::Stderr> {
-    fn default() -> Self {
-        Self { out: io::stderr() }
-    }
-}
-
-impl<T: io::Write> AnsiTerminal<T> {
-    fn color_map() -> HashMap<RgbColor, (u8, u8)> {
-        HashMap::from([
-            (RgbColor::black(), (30, 40)),
-            (RgbColor::red(), (31, 41)),
-            (RgbColor::green(), (32, 42)),
-            (RgbColor::yellow(), (33, 43)),
-            (RgbColor::blue(), (34, 44)),
-            (RgbColor::magenta(), (35, 45)),
-            (RgbColor::cyan(), (36, 46)),
-            (RgbColor::white(), (37, 47)),
-            (RgbColor::bright_black(), (90, 100)),
-            (RgbColor::bright_red(), (91, 101)),
-            (RgbColor::bright_green(), (92, 102)),
-            (RgbColor::bright_yellow(), (93, 103)),
-            (RgbColor::bright_blue(), (94, 104)),
-            (RgbColor::bright_magenta(), (95, 105)),
-            (RgbColor::bright_cyan(), (96, 106)),
-            (RgbColor::bright_white(), (97, 107)),
-        ])
-    }
-
-    fn effect_maps() -> HashMap<TextEffect, u8> {
-        HashMap::from([
-            (TextEffect::Bold, 1),
-            (TextEffect::Dim, 2),
-            (TextEffect::Italic, 3),
-            (TextEffect::Underline, 4),
-            (TextEffect::SlowBlink, 5),
-            (TextEffect::RapidBlink, 6),
-            (TextEffect::Reverse, 7),
-            (TextEffect::Strikethrough, 8),
-            (TextEffect::DoubleUnderline, 9),
-        ])
-    }
+    static ANSI_EFFECT_MAP: [(TextEffect, u32); 9] = [
+        (TextEffect::Bold, 1),
+        (TextEffect::Dim, 2),
+        (TextEffect::Italic, 3),
+        (TextEffect::Underline, 4),
+        (TextEffect::SlowBlink, 5),
+        (TextEffect::RapidBlink, 6),
+        (TextEffect::Reverse, 7),
+        (TextEffect::Strikethrough, 8),
+        (TextEffect::DoubleUnderline, 9),
+    ];
 
     fn render_style(style: &DomStyle) -> Option<String> {
         let mut codes: Vec<String> = Vec::new();
         if let Some(effects) = &style.effects {
             for effect in effects.iter() {
-                codes.push(Self::effect_maps()[effect].to_string());
+                if let Some(code) = ANSI_EFFECT_MAP.iter().find_map(|(key, code)| {
+                    if key == effect {
+                        return Some(code.to_string());
+                    }
+                    None
+                }) {
+                    codes.push(code);
+                }
             }
         }
-        if let Some(bg) = style.bg {
-            codes.push(Self::color_map()[&bg].1.to_string());
+        if let Some(bg) = style.bg
+            && let Some(code) = ANSI_BG_MAP.iter().find_map(|(key, code)| {
+                if key == &bg {
+                    return Some(code.to_string());
+                }
+                None
+            })
+        {
+            codes.push(code);
         }
-        if let Some(fg) = style.fg {
-            codes.push(Self::color_map()[&fg].0.to_string());
+        if let Some(fg) = style.fg
+            && let Some(code) = ANSI_FG_MAP.iter().find_map(|(key, code)| {
+                if key == &fg {
+                    return Some(code.to_string());
+                }
+                None
+            })
+        {
+            codes.push(code);
         }
         match codes.len() {
             0 => None,
@@ -312,60 +332,82 @@ impl<T: io::Write> AnsiTerminal<T> {
         }
     }
 
-    fn render_paragraph(&mut self, p: &Text, indent: u32) -> Result<(), std::io::Error> {
-        if p.newline {
-            writeln!(self.out, "{}{}", " ".repeat(indent as usize), &p.text)
-        } else {
-            write!(self.out, "{}{}", " ".repeat(indent as usize), &p.text)
-        }
+    pub fn render_dom(dom: &DomNode, buf: &mut impl fmt::Write) -> Result<(), fmt::Error> {
+        recursive_render_dom(dom, buf, 0, None)
     }
 
-    fn reset_format(&mut self) -> Result<(), std::io::Error> {
-        write!(self.out, "\x1b[0m")
-    }
-
-    fn render_stack(
-        &mut self,
-        layout: &Layout,
-        indent: u32,
+    fn recursive_render_dom(
+        dom: &DomNode,
+        buf: &mut impl fmt::Write,
+        indent: usize,
         prev_style: Option<&String>,
-    ) -> Result<(), std::io::Error> {
-        let new_indent = indent + layout.style.indentation;
-        if prev_style.is_some() {
-            self.reset_format()?;
+    ) -> Result<(), fmt::Error> {
+        match dom {
+            DomNode::VStack(layout) => recursive_render_vstack(layout, buf, indent, prev_style),
+            DomNode::Text(paragraph) => recursive_render_text(paragraph, buf, indent),
         }
-        let style = Self::render_style(&layout.style);
-        if let Some(s) = &style {
-            write!(self.out, "{}", s)?;
+    }
+
+    fn reset_format(buf: &mut impl fmt::Write) -> Result<(), fmt::Error> {
+        write!(buf, "\x1b[0m")
+    }
+
+    pub fn recursive_render_vstack(
+        dom: &Layout,
+        buf: &mut impl fmt::Write,
+        indent: usize,
+        prev_style: Option<&String>,
+    ) -> Result<(), fmt::Error> {
+        let cur_codes = render_style(&dom.style);
+        if let Some(code_str) = &cur_codes {
+            reset_format(buf)?;
+            write!(buf, "{}", code_str)?;
         }
-        for child in layout.iter() {
-            self.recursive_render(child, new_indent, prev_style)?;
+        for child in dom.iter() {
+            recursive_render_dom(
+                child,
+                buf,
+                indent + dom.style.indentation as usize,
+                cur_codes.as_ref(),
+            )?;
         }
-        if style.is_some() {
-            self.reset_format()?;
+        if cur_codes.is_some() {
+            reset_format(buf)?;
         }
         if let Some(s) = prev_style {
-            write!(self.out, "{}", s)?;
+            write!(buf, "{}", s)?;
         }
         Ok(())
     }
-    fn recursive_render(
-        &mut self,
-        dom: &DomNode,
-        indent: u32,
-        prev_style: Option<&String>,
-    ) -> Result<(), std::io::Error> {
-        match dom {
-            Paragraph(t) => self.render_paragraph(t, indent),
-            VStack(layout) => self.render_stack(layout, indent, prev_style),
+
+    pub fn recursive_render_text(
+        dom: &Paragraph,
+        buf: &mut impl fmt::Write,
+        indent: usize,
+    ) -> Result<(), fmt::Error> {
+        write!(buf, "{:indent$}", "")?;
+        if dom.newline {
+            writeln!(buf, "{}", dom.text)
+        } else {
+            write!(buf, "{}", dom.text)
         }
     }
 }
-impl<T: io::Write> DomRenderer for AnsiTerminal<T> {
-    fn render(&mut self, dom: &DomNode) -> Result<(), std::io::Error> {
-        self.recursive_render(dom, 0, None)
+
+impl Display for DomNode {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        ansi::render_dom(self, f)
     }
-    fn clear(&mut self) -> Result<(), std::io::Error> {
-        write!(self.out, "\x1b[2J")
+}
+
+impl Display for Paragraph {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        ansi::recursive_render_text(self, f, 0)
+    }
+}
+
+impl Display for Layout {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        ansi::recursive_render_vstack(self, f, 0, None)
     }
 }

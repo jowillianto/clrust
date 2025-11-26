@@ -1,5 +1,5 @@
-use crate::{App, Arg, ArgOptionValidator};
-use crate::{paragraph, tui};
+use crate::tui;
+use crate::{App, Arg, ArgOptionValidator, paragraph};
 
 pub trait ActionHandler {
     fn run(&mut self, app: &mut App);
@@ -73,28 +73,30 @@ impl<'a> ActionBuilder<'a> {
         app.parse_args(false);
 
         if app.args().len() <= action_index {
-            app.render_err(
-                &tui::VStack(
+            eprintln!(
+                "{}",
+                tui::VStack(
                     tui::Layout::default()
                         .append_child(paragraph!("arg{}: expected action name", action_index))
                         .style(tui::DomStyle::new().fg(tui::RgbColor::bright_yellow())),
-                ),
-                1,
+                )
             );
+            std::process::exit(1)
         }
 
         let action_name = app.args().arg().to_string();
         match actions.iter_mut().find(|action| action.name == action_name) {
             Some(action) => action.handler.run(app),
             None => {
-                app.render_err(
+                eprintln!(
+                    "{}",
                     &tui::VStack(
                         tui::Layout::default()
                             .append_child(paragraph!("Unknown action '{}'", action_name))
                             .style(tui::DomStyle::new().fg(tui::RgbColor::bright_yellow())),
-                    ),
-                    1,
+                    )
                 );
+                std::process::exit(1)
             }
         }
     }

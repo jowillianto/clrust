@@ -15,7 +15,7 @@ impl ArgKey {
     pub fn make(k: &str) -> Result<Self, ParseError> {
         match Self::is_arg_key(k) {
             true => Ok(Self::make_unchecked(k)),
-            false => Err(ParseError::not_argument_key(k)),
+            false => Err(ParseError::not_argument_key(format_args!("{k}"))),
         }
     }
 
@@ -25,7 +25,7 @@ impl ArgKey {
 
     pub fn parse_arg(k: &str) -> Result<(Self, Option<&str>), ParseError> {
         if !Self::is_arg_key(k) {
-            return Err(ParseError::not_argument_key(k));
+            return Err(ParseError::not_argument_key(format_args!("{k}")));
         }
         match k.find("=") {
             None => Ok((ArgKey::make_unchecked(k), None)),

@@ -7,6 +7,9 @@ edition = "2024"
 crate-type = ["lib"]
 proc-macro = true
 
+[dependencies]
+time = { version = "0.3", features = ["formatting"] }
+
 [dev-dependencies]
 
 

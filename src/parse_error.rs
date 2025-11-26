@@ -1,4 +1,7 @@
-use std::{error::Error, fmt::Display};
+use std::{
+    error::Error,
+    fmt::{self, Display},
+};
 
 #[derive(Debug, PartialEq, Eq)]
 pub enum ParseErrorKind {
@@ -19,60 +22,40 @@ pub struct ParseError {
 }
 
 impl ParseError {
-    pub fn invalid_value(msg: impl Into<String>) -> Self {
+    fn from_args(kind: ParseErrorKind, args: fmt::Arguments<'_>) -> Self {
         Self {
-            kind: ParseErrorKind::InvalidValue,
-            msg: msg.into(),
+            kind,
+            msg: fmt::format(args),
             key: None,
         }
     }
 
-    pub fn duplicate_argument(msg: impl Into<String>) -> Self {
-        Self {
-            kind: ParseErrorKind::DuplicateArgument,
-            msg: msg.into(),
-            key: None,
-        }
+    pub fn invalid_value(args: fmt::Arguments<'_>) -> Self {
+        Self::from_args(ParseErrorKind::InvalidValue, args)
     }
 
-    pub fn no_value_given(msg: impl Into<String>) -> Self {
-        Self {
-            kind: ParseErrorKind::NoValueGiven,
-            msg: msg.into(),
-            key: None,
-        }
+    pub fn duplicate_argument(args: fmt::Arguments<'_>) -> Self {
+        Self::from_args(ParseErrorKind::DuplicateArgument, args)
     }
 
-    pub fn not_required_argument(msg: impl Into<String>) -> Self {
-        Self {
-            kind: ParseErrorKind::NotRequiredArgument,
-            msg: msg.into(),
-            key: None,
-        }
+    pub fn no_value_given(args: fmt::Arguments<'_>) -> Self {
+        Self::from_args(ParseErrorKind::NoValueGiven, args)
     }
 
-    pub fn not_argument_key(msg: impl Into<String>) -> Self {
-        Self {
-            kind: ParseErrorKind::NotArgumentKey,
-            msg: msg.into(),
-            key: None,
-        }
+    pub fn not_required_argument(args: fmt::Arguments<'_>) -> Self {
+        Self::from_args(ParseErrorKind::NotRequiredArgument, args)
     }
 
-    pub fn too_many_value_given(msg: impl Into<String>) -> Self {
-        Self {
-            kind: ParseErrorKind::TooManyValueGiven,
-            msg: msg.into(),
-            key: None,
-        }
+    pub fn not_argument_key(args: fmt::Arguments<'_>) -> Self {
+        Self::from_args(ParseErrorKind::NotArgumentKey, args)
     }
 
-    pub fn not_positional(msg: impl Into<String>) -> Self {
-        Self {
-            kind: ParseErrorKind::NotPositional,
-            msg: msg.into(),
-            key: None,
-        }
+    pub fn too_many_value_given(args: fmt::Arguments<'_>) -> Self {
+        Self::from_args(ParseErrorKind::TooManyValueGiven, args)
+    }
+
+    pub fn not_positional(args: fmt::Arguments<'_>) -> Self {
+        Self::from_args(ParseErrorKind::NotPositional, args)
     }
     pub fn key(mut self, k: impl Into<String>) -> Self {
         self.key = Some(k.into());
@@ -89,8 +72,4 @@ impl Display for ParseError {
     }
 }
 
-impl Error for ParseError {
-    fn source(&self) -> Option<&(dyn Error + 'static)> {
-        None
-    }
-}
+impl Error for ParseError {}

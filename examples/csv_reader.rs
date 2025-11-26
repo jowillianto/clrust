@@ -28,13 +28,14 @@ fn main() -> Result<(), Box<dyn Error>> {
             .validate(ArgEmptyValidator::allow())
             .optional(),
     );
+    app.add_help_arguments();
     app.parse_args(true);
 
     let parsed = app.args();
     let csv_path = parsed
         .first_of("--csv")
         .cloned()
-        .ok_or_else(|| ParseError::invalid_value("--csv is required"))?;
+        .ok_or_else(|| ParseError::invalid_value(format_args!("--csv is required")))?;
     let csv_path = PathBuf::from(csv_path);
     let show_headers = parsed.contains("--headers");
 

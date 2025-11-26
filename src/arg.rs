@@ -64,13 +64,13 @@ impl ArgValidator for ArgOptionValidator {
                 layout = layout.append_child(paragraph!("- {}: <no-help>", v));
             }
         }
-        Some(tui::VStack(layout))
+        Some(tui::DomNode::from(layout))
     }
     fn validate(&self, v: Option<&str>) -> Result<(), ParseError> {
         match v {
-            None => Err(ParseError::no_value_given("")),
+            None => Err(ParseError::no_value_given(format_args!(""))),
             Some(v) => match self.iter().find(|(k, _)| k == v) {
-                None => Err(ParseError::invalid_value(format!(
+                None => Err(ParseError::invalid_value(format_args!(
                     "{} is not a valid option",
                     v
                 ))),
@@ -134,7 +134,7 @@ impl ArgValidator for ArgCountValidator {
     fn post_validate(&self, key: Option<&ArgKey>, args: &mut ParsedArg) -> Result<(), ParseError> {
         let count = key.map(|k| args.count(k) as u64).unwrap_or(1);
         if count < self.min_size || count > self.max_size {
-            Err(ParseError::too_many_value_given(format!(
+            Err(ParseError::too_many_value_given(format_args!(
                 "{} not in {} <= x <= {}",
                 count, self.min_size, self.max_size
             )))
@@ -180,7 +180,7 @@ impl ArgValidator for ArgEmptyValidator {
         match (self.allow_empty, value) {
             (true, _) => Ok(()),
             (false, Some(_)) => Ok(()),
-            (false, None) => Err(ParseError::no_value_given("")),
+            (false, None) => Err(ParseError::no_value_given(format_args!(""))),
         }
     }
 
