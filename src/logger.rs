@@ -4,7 +4,6 @@ use std::{
     fmt::{self, Write},
     sync::OnceLock,
 };
-use time::{OffsetDateTime, format_description::well_known::Rfc3339};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum LogErrorType {
@@ -118,16 +117,8 @@ impl Ord for LogLevel {
 pub struct LogContext<'a> {
     pub status: LogLevel,
     pub location: &'static std::panic::Location<'static>,
-    pub time: OffsetDateTime,
+    pub time: chrono::DateTime<chrono::Local>,
     pub message: fmt::Arguments<'a>,
-}
-
-impl<'a> LogContext<'a> {
-    fn format_time(&'a self) -> Result<String, LogError> {
-        self.time
-            .format(&Rfc3339)
-            .map_err(|_| LogError::format_error(format_args!("timestamp format fail")))
-    }
 }
 
 pub trait LogEmitter: Send + Sync {
@@ -233,7 +224,6 @@ impl ColorfulFormatter {
 
 impl LogFormatter for ColorfulFormatter {
     fn fmt(&self, ctx: &LogContext<'_>) -> Result<String, LogError> {
-        let tp = ctx.format_time()?;
         let mut buf = String::new();
         writeln!(
             buf,
@@ -241,7 +231,7 @@ impl LogFormatter for ColorfulFormatter {
             Layout::new()
                 .style(DomStyle::new().fg(self.level_color(ctx.status.level)))
                 .append_child(Paragraph::new(format_args!("[{}]", ctx.status.name)).no_newline()),
-            tp,
+            ctx.time,
             ctx.message
         )
         .map_err(|_| LogError::format_error(format_args!("format error")))?;
@@ -254,9 +244,8 @@ pub struct BwFormatter;
 
 impl LogFormatter for BwFormatter {
     fn fmt<'a>(&'a self, ctx: &LogContext<'a>) -> Result<String, LogError> {
-        let timestamp = ctx.format_time()?;
         let mut buf = String::new();
-        writeln!(buf, "[{}] {} {}", ctx.status.name, timestamp, ctx.message)
+        writeln!(buf, "[{}] {} {}", ctx.status.name, ctx.time, ctx.message)
             .map_err(|_| LogError::format_error(format_args!("format error")))?;
         Ok(buf)
     }
@@ -352,15 +341,11 @@ pub fn root() -> &'static Logger {
 }
 
 #[track_caller]
-pub fn log_with(
-    logger: &Logger,
-    status: LogLevel,
-    message: fmt::Arguments<'_>,
-) {
+pub fn log_with(logger: &Logger, status: LogLevel, message: fmt::Arguments<'_>) {
     logger.log(LogContext {
         status,
         location: std::panic::Location::caller(),
-        time: OffsetDateTime::now_utc(),
+        time: chrono::Local::now(),
         message,
     });
 }
