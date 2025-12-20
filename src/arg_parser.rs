@@ -46,7 +46,8 @@ impl ParamTier {
                         }
                         _ => Err(e),
                     },
-                }?;
+                }
+                .map_err(|e| e.key(key.clone()))?;
                 args.add_argument(key.clone(), parse_res.unwrap_or_default());
                 raw_args.next();
                 return Ok(true);
