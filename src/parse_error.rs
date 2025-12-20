@@ -67,7 +67,7 @@ impl Display for ParseError {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match &self.key {
             None => write!(f, "{:?}: {}", self.kind, self.msg),
-            Some(k) => write!(f, "{:?}: {} - {}", self.kind, k, self.msg),
+            Some(k) => write!(f, "{}: {:?}({})", k, self.kind, self.msg),
         }
     }
 }

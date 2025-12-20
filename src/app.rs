@@ -11,12 +11,13 @@ pub struct App {
 
 impl App {
     pub fn new(identity: AppIdentity) -> Self {
-        Self {
+        let app = Self {
             identity,
             parser: ArgParser::new(),
             parsed: ParsedArg::new(),
             raw_args: std::env::args().peekable(),
-        }
+        };
+        app
     }
 
     pub fn identity(&self) -> &AppIdentity {
@@ -115,7 +116,7 @@ impl App {
                     "{}",
                     tui::VStack(
                         tui::Layout::default()
-                            .append_child(paragraph!("{}", err.msg))
+                            .append_child(paragraph!("{}", err))
                             .style(tui::DomStyle::new().fg(tui::RgbColor::bright_yellow())),
                     )
                 );

@@ -9,7 +9,7 @@ fn main() {
         )
         .author("Jonathan Willianto"),
     );
-
+    app.add_help_arguments();
     app.add_argument(
         "--echo",
         Arg::new()

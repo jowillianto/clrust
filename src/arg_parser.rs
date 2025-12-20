@@ -46,8 +46,7 @@ impl ParamTier {
                         }
                         _ => Err(e),
                     },
-                }
-                .map_err(|e| e.key(key.clone()))?;
+                }?;
                 args.add_argument(key.clone(), parse_res.unwrap_or_default());
                 raw_args.next();
                 return Ok(true);
@@ -81,7 +80,9 @@ impl ParamTier {
         while is_parser_run && let Some(current_arg) = raw_args.peek().cloned() {
             is_parser_run = false;
             if let Ok((parsed_key, parsed_value)) = ArgKey::parse_arg(&current_arg) {
-                is_parser_run = self.parse_params(&parsed_key, parsed_value, args, raw_args)?;
+                is_parser_run = self
+                    .parse_params(&parsed_key, parsed_value, args, raw_args)
+                    .map_err(|e| e.key(parsed_key))?;
             }
         }
         for (arg_key, arg) in self.params.iter() {
