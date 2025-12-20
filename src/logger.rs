@@ -431,3 +431,92 @@ pub fn error(message: fmt::Arguments<'_>) {
 pub fn critical(message: fmt::Arguments<'_>) {
     log(LogLevel::critical(), message);
 }
+
+#[macro_export]
+macro_rules! trace {
+    ($($arg:tt)*) => {{
+        $crate::logger::trace(format_args!($($arg)*))
+    }};
+}
+
+#[macro_export]
+macro_rules! trace_with {
+    ($logger:expr, $($arg:tt)*) => {{
+        $crate::logger::trace_with($logger, format_args!($($arg)*))
+    }};
+}
+
+#[macro_export]
+macro_rules! debug {
+    ($($arg:tt)*) => {{
+        $crate::logger::debug(format_args!($($arg)*))
+    }};
+}
+
+#[macro_export]
+macro_rules! debug_with {
+    ($logger:expr, $($arg:tt)*) => {{
+        $crate::logger::debug_with($logger, format_args!($($arg)*))
+    }};
+}
+
+#[macro_export]
+macro_rules! info {
+    ($($arg:tt)*) => {{
+        $crate::logger::info(format_args!($($arg)*))
+    }};
+}
+
+#[macro_export]
+macro_rules! info_with {
+    ($logger:expr, $($arg:tt)*) => {{
+        $crate::logger::info_with($logger, format_args!($($arg)*))
+    }};
+}
+
+#[macro_export]
+macro_rules! warn {
+    ($($arg:tt)*) => {{
+        $crate::logger::warn(format_args!($($arg)*))
+    }};
+}
+
+#[macro_export]
+macro_rules! warn_with {
+    ($logger:expr, $($arg:tt)*) => {{
+        $crate::logger::warn_with($logger, format_args!($($arg)*))
+    }};
+}
+
+#[macro_export]
+macro_rules! error {
+    ($($arg:tt)*) => {{
+        $crate::logger::error(format_args!($($arg)*))
+    }};
+}
+
+#[macro_export]
+macro_rules! error_with {
+    ($logger:expr, $($arg:tt)*) => {{
+        $crate::logger::error_with($logger, format_args!($($arg)*))
+    }};
+}
+
+#[macro_export]
+macro_rules! critical {
+    ($($arg:tt)*) => {{
+        $crate::logger::critical(format_args!($($arg)*))
+    }};
+}
+
+#[macro_export]
+macro_rules! critical_with {
+    ($logger:expr, $($arg:tt)*) => {{
+        $crate::logger::critical_with($logger, format_args!($($arg)*))
+    }};
+}
+
+pub use crate::{
+    critical, critical_with, debug, debug_with, error, error_with, info, info_with, trace,
+    trace_with, warn, warn_with,
+};

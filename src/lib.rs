@@ -17,6 +17,8 @@ pub use app_version::*;
 pub use arg::*;
 pub use arg_key::*;
 pub use arg_parser::*;
-pub use logger as log;
 pub use parse_error::*;
 pub use parsed_arg::*;
+
+#[cfg(feature = "log")]
+pub use logger as log;

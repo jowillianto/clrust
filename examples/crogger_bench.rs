@@ -106,7 +106,7 @@ fn create_logger(formatter: &str, emitter: &str) -> Logger {
 
 fn log_messages(logger: &Logger, msg: &str, count: u64) -> u64 {
     for i in 0..count {
-        log::info_with(logger, format_args!("{i} - {msg}"));
+        log::info_with!(logger, "{i} - {msg}");
     }
     count
 }
@@ -181,19 +181,13 @@ fn main() {
 
     let message = random_string(msg_length as usize);
 
-    log::warn(format_args!("Begin: Logger Init"));
+    log::warn!("Begin: Logger Init");
     let (logger, init_time) = invoke_bench(|| create_logger(&formatter, &emitter));
-    log::warn(format_args!(
-        "End: Logger Init ({} ms)",
-        init_time.as_millis()
-    ));
+    log::warn!("End: Logger Init ({} ms)", init_time.as_millis());
 
-    log::warn(format_args!("Begin: Log Message"));
+    log::warn!("Begin: Log Message");
     let (_, log_time) = invoke_bench(|| log_messages(&logger, &message, count));
-    log::warn(format_args!(
-        "End: Log Message ({} ms)",
-        log_time.as_millis()
-    ));
+    log::warn!("End: Log Message ({} ms)", log_time.as_millis());
 
     std::thread::sleep(Duration::from_secs(1));
 }
