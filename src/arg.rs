@@ -251,7 +251,16 @@ impl ArgValidator for Arg {
     }
 
     fn help(&self) -> Option<tui::DomNode> {
-        self.help_text.as_ref().map(|text| paragraph!("{}", text))
+        let mut layout = tui::Layout::default();
+        if let Some(h) = &self.help_text {
+            layout = layout.append_child(paragraph!("{}", h));
+        }
+        for validator in &self.validators {
+            if let Some(node) = validator.help() {
+                layout = layout.append_child(node);
+            }
+        }
+        Some(layout.into())
     }
 }
 

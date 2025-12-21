@@ -11,13 +11,12 @@ pub struct App {
 
 impl App {
     pub fn new(identity: AppIdentity) -> Self {
-        let app = Self {
+        Self {
             identity,
             parser: ArgParser::new(),
             parsed: ParsedArg::new(),
             raw_args: std::env::args().peekable(),
-        };
-        app
+        }
     }
 
     pub fn identity(&self) -> &AppIdentity {
