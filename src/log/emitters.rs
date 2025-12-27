@@ -61,15 +61,14 @@ impl<W: std::io::Write> Emitter for FileEmitter<W> {
 pub struct ThreadedEmitter {
     sender: std::sync::mpsc::Sender<String>,
     thread: Option<JoinHandle<()>>,
-    is_running: AtomicBool,
+    is_running: std::sync::Arc<AtomicBool>,
 }
 
 impl ThreadedEmitter {
     pub fn new(emitter: impl 'static + Emitter) -> Self {
         let (sender, receiver) = std::sync::mpsc::channel::<String>();
-        let is_running = AtomicBool::new(true);
-        let is_running_ptr = is_running.as_ptr();
-        let is_running_ref = unsafe { AtomicBool::from_ptr(is_running_ptr) };
+        let is_running = std::sync::Arc::new(AtomicBool::new(true));
+        let is_running_ref = is_running.clone();
         let handle = thread::spawn(move || {
             loop {
                 match receiver.try_recv() {
@@ -113,6 +112,6 @@ impl Emitter for ThreadedEmitter {
     fn emit(&self, v: String) -> Result<(), Error> {
         self.sender
             .send(v)
-            .map_err(|e| Error::io_error(format_args!("{}", e)))
+            .map_err(|e| Error::io_error(format_args!("{}\n", e)))
     }
 }
