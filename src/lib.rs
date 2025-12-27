@@ -5,7 +5,6 @@ pub mod app_version;
 pub mod arg;
 pub mod arg_key;
 pub mod arg_parser;
-pub mod logger;
 pub mod parse_error;
 pub mod parsed_arg;
 pub mod tui;
@@ -21,4 +20,4 @@ pub use parse_error::*;
 pub use parsed_arg::*;
 
 #[cfg(feature = "log")]
-pub use logger as log;
+pub mod log;

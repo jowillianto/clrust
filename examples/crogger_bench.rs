@@ -1,8 +1,8 @@
 use clark::{
     App, AppIdentity, AppVersion, Arg, ArgOptionValidator,
     log::{
-        self, BwFormatter, ColorfulFormatter, LogContext, LogEmitter, LogError, LogFormatter,
-        Logger, StderrEmitter, StdoutEmitter,
+        self, BwFormatter, ColorfulFormatter, Context, Emitter, Error, FileEmitter, Formatter,
+        Logger, StderrEmitter, StdoutEmitter, ThreadedEmitter,
     },
 };
 use std::{
@@ -13,8 +13,8 @@ use std::{
 #[derive(Default)]
 struct EmptyEmitter;
 
-impl LogEmitter for EmptyEmitter {
-    fn emit(&self, _: &str) -> Result<(), LogError> {
+impl Emitter for EmptyEmitter {
+    fn emit(&self, _: String) -> Result<(), Error> {
         Ok(())
     }
 }
@@ -22,11 +22,11 @@ impl LogEmitter for EmptyEmitter {
 #[derive(Clone, Copy, Default)]
 struct PlainFormatter;
 
-impl LogFormatter for PlainFormatter {
-    fn fmt(&self, ctx: &LogContext<'_>) -> Result<String, LogError> {
+impl Formatter for PlainFormatter {
+    fn fmt(&self, ctx: &Context<'_>) -> Result<String, Error> {
         let mut buf = String::new();
         fmt::write(&mut buf, ctx.message)
-            .map_err(|_| LogError::format_error(format_args!("format error")))?;
+            .map_err(|_| Error::format_error(format_args!("format error")))?;
         buf.push('\n');
         Ok(buf)
     }
@@ -35,8 +35,8 @@ impl LogFormatter for PlainFormatter {
 #[derive(Clone, Copy, Default)]
 struct EmptyFormatter;
 
-impl LogFormatter for EmptyFormatter {
-    fn fmt(&self, _: &LogContext<'_>) -> Result<String, LogError> {
+impl Formatter for EmptyFormatter {
+    fn fmt(&self, _: &Context<'_>) -> Result<String, Error> {
         Ok(String::new())
     }
 }
@@ -89,7 +89,7 @@ where
     }
 }
 
-fn create_logger(formatter: &str, emitter: &str) -> Logger {
+fn create_logger(formatter: &str, emitter: &str, threaded: bool) -> Logger {
     let logger = Logger::default();
     let logger = match formatter {
         "bw" => logger.set_formatter(BwFormatter),
@@ -97,10 +97,17 @@ fn create_logger(formatter: &str, emitter: &str) -> Logger {
         "empty" => logger.set_formatter(EmptyFormatter),
         _ => logger.set_formatter(ColorfulFormatter),
     };
-    match emitter {
-        "stderr" => logger.set_emitter(StderrEmitter),
-        "empty" => logger.set_emitter(EmptyEmitter),
-        _ => logger.set_emitter(StdoutEmitter),
+    match (threaded, emitter) {
+        (false, "stderr") => logger.set_emitter(StderrEmitter),
+        (false, "empty") => logger.set_emitter(EmptyEmitter),
+        (false, "file") => logger.set_emitter(FileEmitter::open("example.log").unwrap()),
+        (false, _) => logger.set_emitter(StdoutEmitter),
+        (true, "stderr") => logger.set_emitter(ThreadedEmitter::new(StderrEmitter)),
+        (true, "empty") => logger.set_emitter(ThreadedEmitter::new(EmptyEmitter)),
+        (true, "file") => logger.set_emitter(ThreadedEmitter::new(
+            FileEmitter::open("example.log").unwrap(),
+        )),
+        (true, _) => logger.set_emitter(ThreadedEmitter::new(StdoutEmitter)),
     }
 }
 
@@ -141,10 +148,12 @@ fn main() {
                 ArgOptionValidator::new()
                     .option("stdout", Some("emit logs to stdout (default)".to_string()))
                     .option("stderr", Some("emit logs to stderr".to_string()))
+                    .option("file", Some("emit the logs to example.log".to_string()))
                     .option("empty", Some("discard all emitted output".to_string())),
             )
             .optional(),
     );
+    app.add_argument("--threaded", Arg::new().as_flag());
     app.add_argument(
         "--format",
         Arg::new()
@@ -182,7 +191,8 @@ fn main() {
     let message = random_string(msg_length as usize);
 
     log::warn!("Begin: Logger Init");
-    let (logger, init_time) = invoke_bench(|| create_logger(&formatter, &emitter));
+    let (logger, init_time) =
+        invoke_bench(|| create_logger(&formatter, &emitter, app.args().contains("--threaded")));
     log::warn!("End: Logger Init ({} ms)", init_time.as_millis());
 
     log::warn!("Begin: Log Message");
